@@ -47,16 +47,14 @@ class Game(ShowBase):
         self.taskMgr.add(self.spin_cam_task, "spinCamTask")
 
         # register event handlers
-        self.keymap = {"left":False,"right":False,"up":False,"down":False,"jump":False}
+        self.keymap = {"left":False,"right":False,"jump":False}
         self.accept("a", self.__update_keymap,["left",True])  # , ["w"])
         self.accept("a-up", self.__update_keymap,["left",False])
         self.accept("d", self.__update_keymap,["right",True])
         self.accept("d-up", self.__update_keymap,["right",False])
-        self.accept("w", self.__update_keymap,["up",True])
-        self.accept("w-up", self.__update_keymap,["up",False])
-        self.accept("s", self.__update_keymap,["down",True])
+       
         self.accept("e", self.toggleCamera,[self.camState])
-        self.accept("s-up", self.__update_keymap,["down",False])
+       
         self.accept("space", self.__update_keymap,["jump",True])
         self.accept("space-up", self.__update_keymap,["jump",False])
 
@@ -195,15 +193,12 @@ class Game(ShowBase):
         body = player.getPythonTag("body")
         pos = body.getPosition()
         dt = globalClock.getDt()
+        pos.y += self.speed/2 * dt #divided by two for easier testing
 
         if self.keymap["left"]:
             pos.x -= self.speed * dt
         if self.keymap["right"]:
             pos.x += self.speed * dt
-        if self.keymap["up"]:
-            pos.y += self.speed * dt
-        if self.keymap["down"]:
-            pos.y -= self.speed * dt
         if self.keymap["jump"]:
             # self.taskMgr.add(self.__jump, "jumpTask")
             pos.z += self.jump_speed * dt
