@@ -24,12 +24,23 @@ class Game(ShowBase):
         # Setup collision detection & physics
         self.setup_collision_detection()
         self.setup_physics()
-
-        # Setup game world and instances
-        self.cam.setPos(0, -100, 10)
         self.setup_ode()
         self.add_ground()
+
         self.add_player()
+        # Setup game world and instances
+        #self.cam.setPos(0, -100, 10)
+        self.camState = True # true = behind, false = side
+        self.dr = base.camNode.getDisplayRegion(0)
+        self.dr.setActive(1) 
+        self.camBehind= Camera("camBehind")
+        self.camSide = Camera("camSide")
+        self.cameraBehind = self.render.attachNewNode(self.camBehind)
+        self.cameraSide = self.render.attachNewNode(self.camSide)
+        self.dr.setCamera(self.cameraBehind)
+        self.taskMgr.add(self.followCubeBehindTask, "followCubeBehindTask")
+        self.taskMgr.add(self.followCubeSideTask, "followCubeSideTask")  
+        self.taskMgr.add(self.advanceCube,"advanceCube")
 
         # Start tasks
         self.taskMgr.add(self.update_ode, "UpdateODE")
@@ -44,11 +55,49 @@ class Game(ShowBase):
         self.accept("w", self.__update_keymap,["up",True])
         self.accept("w-up", self.__update_keymap,["up",False])
         self.accept("s", self.__update_keymap,["down",True])
+        self.accept("e", self.toggleCamera,[self.camState])
         self.accept("s-up", self.__update_keymap,["down",False])
         self.accept("space", self.__update_keymap,["jump",True])
         self.accept("space-up", self.__update_keymap,["jump",False])
 
         # self.accept("%s-up" % (w_button), self.stop_moving_forward)
+
+    def toggleCamera(self,state):
+        if self.camState:
+            self.dr.setCamera(self.cameraSide)
+        else:
+            self.dr.setCamera(self.cameraBehind)
+        print("switched cams")
+        self.camState = not self.camState
+
+    def advanceCube(self, task):
+        self.sm.setPos(self.sm.getPos() + Vec3(0,10, 0))
+        return task.cont
+
+
+    def followCubeBehindTask(self, task):
+
+        
+
+        self.cameraBehind.setPos(self.sm.getX(), self.sm.getY()-15, 3)
+        self.cameraBehind.lookAt(self.sm)
+        
+
+    
+
+        return Task.cont
+
+    def followCubeSideTask(self, task):
+
+        
+
+        self.cameraSide.setPos(self.sm.getX()+ 20, self.sm.getY()-5, 3)
+        self.cameraSide.lookAt(self.sm)
+        
+
+    
+
+        return Task.cont
 
     def setup_collision_detection(self):
         self.cTrav = CollisionTraverser()
@@ -92,19 +141,19 @@ class Game(ShowBase):
 
     def add_player(self):
         self.player = self.loader.loadModel("assets/cube.egg")
-        sm = self.render.attachNewNode(PLAYER_TAG)
+        self.sm = self.render.attachNewNode(PLAYER_TAG)
         # sm.setPos(random.uniform(-20, 20), random.uniform(-30, 30), random.uniform(10, 30))
-        sm.setPos(0,0, 1)
-        self.player.instanceTo(sm)
+        self.sm.setPos(0,0, 1)
+        self.player.instanceTo(self.sm)
         body = OdeBody(self.odeWorld)
         mass = OdeMass()
         # mass.setSphereTotal(10, 1)
         mass.setBoxTotal(2000, 1,1,1)
         body.setMass(mass)
-        body.setPosition(sm.getPos())
+        body.setPosition(self.sm.getPos())
         geom = OdeSphereGeom(self.space, 1)
         geom.setBody(body)
-        sm.setPythonTag("body", body)
+        self.sm.setPythonTag("body", body)
 
     def add_floor(self):
         floor = self.render.attachNewNode(CollisionNode("floor"))

@@ -7,12 +7,15 @@ from direct.interval.IntervalGlobal import Sequence
 from direct.showbase.DirectObject import DirectObject
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
+"""
+
 from panda3d.core import (CardMaker, Geom, GeomNode, GeomTriangles,
                           GeomVertexData, GeomVertexFormat, GeomVertexWriter,
                           Light, LVector3, PerspectiveLens, Point3, Spotlight,
                           TextNode, Texture, Vec3, Vec4, lookAt,ClockObject, Camera)
 
-
+"""
+from panda3d.core import *
 class GameObject():
     pass    
 class Player(GameObject):
@@ -62,6 +65,9 @@ def makeSquare(x1, y1, z1, x2, y2, z2):
 
     # adding different colors to the vertex for visibility
     color.addData4f(1.0, 0.0, 0.0, 1.0)
+    #color.addData4f(1.0, 0.0, 0.0, 1.0)
+    #color.addData4f(1.0, 0.0, 0.0, 1.0)
+    #color.addData4f(1.0, 0.0, 0.0, 1.0)
     color.addData4f(0.0, 1.0, 0.0, 1.0)
     color.addData4f(0.0, 0.0, 1.0, 1.0)
     color.addData4f(1.0, 0.0, 1.0, 1.0)
@@ -88,7 +94,11 @@ class MyApp(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
         #setting up scene
+        properties = WindowProperties()
+        properties.setSize(900, 900)
+        self.win.requestProperties(properties)
         self.scene = self.loader.loadModel("models/environment")
+        
         self.scene.reparentTo(self.render)
         self.scene.setScale(.25,.25,.25)
         self.scene.setPos(-8,42,-3)
@@ -129,8 +139,25 @@ class MyApp(ShowBase):
         #self.jumpSpeed=3 #testing
         self.jumping=False
         self.jumpSpeed=0
-        
-        
+        """
+        self.cTrav = CollisionTraverser()
+
+        self.cubeCol = CollisionNode('cubeCol')
+        self.cubeCol.addSolid(CollisionSphere(center=(0, 0, 2), radius=1.5)) # change to cube
+        self.cubeCol.addSolid(CollisionSphere(center=(0, -0.25, 4), radius=1.5)) # # change to cube
+        self.cubeCol.setFromCollideMask(CollideMask.bit(0))
+        self.cubeCol.setIntoCollideMask(CollideMask.allOff())
+        self.cubeColNp = self.cube.attachNewNode(self.cubeCol)
+        self.cubePusher = CollisionHandlerPusher()
+        self.cubePusher.horizontal = True
+        self.cTrav.showCollisions(render)
+        # Note that we need to add ralph both to the pusher and to the
+        # traverser; the pusher needs to know which node to push back when a
+        # collision occurs!
+        self.cubePusher.addCollider(self.cubeColNp, self.cube)
+        self.cTrav.addCollider(self.cubeColNp, self.cubePusher)
+
+        """
         #setting up interactions
         self.keyMap = {
             "left" : False,
@@ -147,7 +174,17 @@ class MyApp(ShowBase):
     def updateKeyMap(self, controlName, controlState):
         self.keyMap[controlName] = controlState
         print (controlName, "set to", controlState)
+    """
+    def addFloor(self):
+        self.floor = CollisionHandlerFloor()
+        floor = self.render.attachNewNode(CollisionNode("floor"))
+        floor.node().addSolid(CollisionPlane(Plane(Vec3(0, 0, 1), Point3(0, 0, 0))))
 
+        self.cTrav.addCollider(self.col_player, self.floor)
+
+        floor.show()
+
+    """
     def toggleCamera(self,state):
         if self.camState:
             self.dr.setCamera(self.cameraSide)
