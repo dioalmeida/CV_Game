@@ -289,4 +289,7 @@ class Game(ShowBase):
         return task.cont
 
     def __update_keymap(self,key,state):
-        self.keymap[key] = state
+        if key in ["left", "right"] and self.camState:
+            self.keymap[key] = state
+        if key=="jump" and not self.camState:
+            self.keymap[key] = state
