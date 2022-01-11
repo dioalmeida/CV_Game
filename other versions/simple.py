@@ -20,6 +20,7 @@ FLOOR_Z=1
 CAMERA_DIST_X = 40
 CAMERA_DIST_Y = 50
 class Game(ShowBase):
+          
 
     def __init__(self):
         super().__init__()
@@ -48,7 +49,7 @@ class Game(ShowBase):
         self.dr.setCamera(self.cameraBehind)
         self.taskMgr.add(self.followCubeBehindTask, "followCubeBehindTask")
         self.taskMgr.add(self.followCubeSideTask, "followCubeSideTask")
-
+        self.taskMgr.add(self.checkImpactTask,"checkImpactTask")
 
 
 
@@ -64,9 +65,15 @@ class Game(ShowBase):
         self.accept("e", self.toggleCamera,[self.camState])
         self.accept("space", self.__update_keymap,["jump",True])
         self.accept("r", self.restart_game)
+
+        #self.accept("cPlayer-into-wall", self.on_landing)
+    
     def restart_game(self): #simple just for debugging
         self.sm.setPos(0,-40,FLOOR_Z)
-    
+        #self.player.setPos(0,-40, FLOOR_Z)
+        #self.sm.getChildren().detach()
+        #self.add_player()
+        #self.setup_level()
     def add_player(self):
 
         self.player = self.loader.loadModel("assets/cube2.egg")
@@ -82,12 +89,15 @@ class Game(ShowBase):
         self.player.instanceTo(self.sm)
         self.jumping=False
         self.jumpSpeed=0
+        self.lastY=-1
+        self.lastZ=-1
         
         
         
     def setup_level(self):
         self.cTrav = CollisionTraverser()
         self.pusher = CollisionHandlerPusher()
+        #self.queue = CollisionHandlerQueue()
         floor = self.render.attachNewNode(CollisionNode("floor"))
         floorColliderNode = CollisionNode("cFloor")
         floorColliderNode.addSolid(CollisionPlane(Plane(Vec3(0, 0, FLOOR_Z), Point3(0, 0, 0))))
@@ -97,33 +107,26 @@ class Game(ShowBase):
         self.floorCollider = floor.attachNewNode(floorColliderNode)
         self.floorCollider.show()
         self.plane = self.loader.loadModel("assets/floor.egg")
-        self.plane.setPos(0,0,FLOOR_Z)
+        self.plane.setPos(0,0,0)
         self.plane.reparentTo(self.render)
-        self.plane.setColor(255,0,0,0.5)
+        self.plane.setColor(255,0,0,0)
 
-        self.map = self.loader.loadModel("assets/testmap3.egg")
+        #wall was map before
+        #self.map = self.loader.loadModel("assets/testmap3.egg")
         
-        self.map.setPos(1,0,2)
-        self.map.reparentTo(self.render)
-        self.map.setColor(0,0,255,0.5)
-        self.traps = self.loader.loadModel("assets/traps.glb")
+        wall_heights= [FLOOR_Z,FLOOR_Z+4]
+        for i in range(10):
+            wall = self.loader.loadModel("assets/basewall.egg")
+            wall.setPos(random.randint(1,10),10*(i+1),wall_heights[random.randint(0,(len(wall_heights))-1)])
+            wall.reparentTo(self.render)
+            wall.setColor(0,0,255,0.5)
         
-        self.traps.setPos(1,0,2)
-        self.traps.reparentTo(self.render)
-        self.traps.setColor(0,0,255,0.5)
-        """
+        self.pusher.addCollider(self.collider, self.sm)
         
-        self.map2 = self.loader.loadModel("assets/untitled.egg")
-        self.map2.setPos(1,10,2)
-        self.map2.reparentTo(self.render)
-        self.map2.setColor(0,0,255,0.5)
-        """
-
-        base.pusher.addCollider(self.collider, self.sm)
-        base.cTrav.addCollider(self.collider, self.pusher)
-        #base.pusher.addCollider(self.floorCollider, floor)
-        #base.cTrav.addCollider(self.floorCollider, self.pusher)
-
+        
+        self.cTrav.addCollider(self.collider, self.pusher)
+        
+      
     def add_lighting(self):
         self.alight = AmbientLight("alight")
         self.alight.setColor((0.2, 0.2, 0.2, 1))
@@ -152,7 +155,17 @@ class Game(ShowBase):
     
 
         return Task.cont
-
+    
+    def checkImpactTask(self, task):
+        if self.sm.getY() == self.lastY:
+            self.restart_game()
+        if self.sm.getZ() == self.lastZ and self.lastZ>1:
+            self.restart_game()
+        else:    
+            self.lastY = self.sm.getY()
+            self.lastZ = self.sm.getZ()
+        return Task.cont
+    
     def followCubeSideTask(self, task):
 
         
@@ -168,6 +181,7 @@ class Game(ShowBase):
     def update_ode(self, task):
        
         current_vec=self.sm.getPos()
+        #test_z = self.sm.getZ()
         change_vec=Vec3(0,0,0)
        
         dt = globalClock.getDt()
@@ -179,8 +193,8 @@ class Game(ShowBase):
         if self.keymap["right"]:
             change_vec+= Vec3(self.speed*dt,0,0)
             
-        if self.keymap["jump"]:
-       
+        #if self.keymap["jump"]:
+        if self.jumping:
        
             """
             updated_z=self.sm.getZ()+self.jumpSpeed*dt
@@ -195,7 +209,8 @@ class Game(ShowBase):
             self.jumpSpeed = self.jumpSpeed - 9.8*dt
             if updated_z<=FLOOR_Z:
                 self.jumping=False
-       
+        
+        
         change_vec+=Vec3(0,self.speed*dt,0)
 
         self.sm.setPos(current_vec+change_vec)
