@@ -4,19 +4,23 @@ import random
 
 from direct.gui.DirectGui import *
 from direct.showbase.ShowBase import ShowBase
+from direct.gui.OnscreenText import OnscreenText
 from direct.task import Task
 from panda3d.core import *
 from panda3d.ode import *
 from panda3d.physics import *
-import gltf
+#import gltf
 
 PLAYER_TAG = "player-instance"
 MAP_TAG = "map-instance"
 TRAPS_TAG = "traps-instance"
-SPEED = 15
+SPEED = 20
 JUMP_SPEED = 10
 FLOOR_Z=1
-
+scores=[]
+#colours=[(84,206,145),(120,84,206),(206,84,116)]
+colours=[(255,255,0),(0,255,255),(255,0,255)]
+zones = [0,1,2]
 CAMERA_DIST_X = 40
 CAMERA_DIST_Y = 50
 CAMERA_DIST_Z= 10
@@ -25,14 +29,18 @@ class Game(ShowBase):
 
     def __init__(self):
         super().__init__()
-        gltf.patch_loader(self.loader) #enable gltf reading
-
+       
         # Variable declaration
         self.speed = SPEED
         self.jump = 0
         self.jump_speed = JUMP_SPEED
 
         self.sm = None
+        self.score=0
+        self.scoreUI = OnscreenText(text = "0",
+                            pos = (-1.3, 0.825),
+                            mayChange = True,
+                            align = TextNode.ALeft)
         self.ground = None
         self.contacts = None
         self.space = None
@@ -51,8 +59,9 @@ class Game(ShowBase):
         self.taskMgr.add(self.followCubeBehindTask, "followCubeBehindTask")
         self.taskMgr.add(self.followCubeSideTask, "followCubeSideTask")
         self.taskMgr.add(self.checkImpactTask,"checkImpactTask")
+        self.taskMgr.add(self.updateScoreTask,"updateScoreTask")
 
-
+       
 
         # Start tasks
         self.taskMgr.add(self.update_ode, "UpdateODE")
@@ -67,19 +76,25 @@ class Game(ShowBase):
         self.accept("space", self.__update_keymap,["jump",True])
         self.accept("r", self.restart_game)
 
-        #self.accept("cPlayer-into-wall", self.on_landing)
-    
-    def restart_game(self): #simple just for debugging
+    def restart_game(self): 
         self.sm.setPos(0,-40,FLOOR_Z)
-        #self.player.setPos(0,-40, FLOOR_Z)
-        #self.sm.getChildren().detach()
-        #self.add_player()
-        #self.setup_level()
+        scores.append(int(self.score/25))
+        print(scores)
+        self.score=0
+       
+
+    def updateScoreTask(self, task):
+        self.score +=1
+        if self.score%25==0:
+            self.scoreUI.setText(str(int(self.score/25)))
+        return Task.cont
+
+
     def add_player(self):
 
         self.player = self.loader.loadModel("assets/cube2.egg")
         self.sm = self.render.attachNewNode(PLAYER_TAG)
-        self.sm.setColor(0,255,0,0.5)
+        self.sm.setColor(*colours[0])
         self.sm.setPos(0,-40, FLOOR_Z)
         self.colliderNode = CollisionNode("cPlayer")
 
@@ -102,26 +117,26 @@ class Game(ShowBase):
         #self.queue = CollisionHandlerQueue()
         floor = self.render.attachNewNode(CollisionNode("floor"))
         floorColliderNode = CollisionNode("cFloor")
-        floorColliderNode.addSolid(CollisionPlane(Plane(Vec3(0, 0, FLOOR_Z), Point3(0, 0, 0))))
-        floor.setColor(0,0,255,0.5)
+        floorColliderNode.addSolid(CollisionPlane(Plane(Vec3(0, 0, 0), Point3(0, 0, 0))))
+        floor.setColor(0,0,0,0.5)
         
         
         self.floorCollider = floor.attachNewNode(floorColliderNode)
         self.floorCollider.show()
-        self.plane = self.loader.loadModel("assets/floor.egg")
-        self.plane.setPos(0,0,0)
+        self.plane = self.loader.loadModel("assets/floorplane.egg")
+        self.plane.setPos(5,20,-1)
         self.plane.reparentTo(self.render)
-        self.plane.setColor(255,0,0,0)
+        self.plane.setColor(100,100,100,0.5)
 
-        #wall was map before
-        #self.map = self.loader.loadModel("assets/testmap3.egg")
-        
         wall_heights= [FLOOR_Z,FLOOR_Z+4]
-        for i in range(10):
+        for i in range(20):
+            #if random.randint(0,1):#ghost or regular wall
             wall = self.loader.loadModel("assets/basewall.egg")
-            wall.setPos(random.randint(1,10),10*(i+1),wall_heights[random.randint(0,(len(wall_heights))-1)])
+            #else:
+            #    wall = self.loader.loadModel("assets/ghostbasewall.egg")
+            wall.setPos(random.randint(-4,2),10*(i+1),wall_heights[random.randint(0,(len(wall_heights))-1)])
             wall.reparentTo(self.render)
-            wall.setColor(0,0,255,0.5)
+            wall.setColor(Vec4(*colours[random.randint(0,2)],1))
         
         self.pusher.addCollider(self.collider, self.sm)
         
@@ -143,6 +158,8 @@ class Game(ShowBase):
     def toggleCamera(self,state):
         if self.camState:
             self.dr.setCamera(self.cameraSide)
+            self.keymap["left"]=False
+            self.keymap["right"]=False
         else:
             self.dr.setCamera(self.cameraBehind)
         self.camState = not self.camState
@@ -162,6 +179,7 @@ class Game(ShowBase):
         if self.sm.getY() == self.lastY:
             self.restart_game()
         if self.sm.getZ() == self.lastZ and self.lastZ>1:
+            self.jumping=False
             self.restart_game()
         #if self.camState and (self.keymap["left"] or self.keymap["right"]) and self.sm.getX()==self.lastX:
         #    self.restart_game()
@@ -186,7 +204,8 @@ class Game(ShowBase):
     def update_ode(self, task):
        
         current_vec=self.sm.getPos()
-        #test_z = self.sm.getZ()
+
+        
         change_vec=Vec3(0,0,0)
        
         dt = globalClock.getDt()
@@ -214,10 +233,10 @@ class Game(ShowBase):
             self.jumpSpeed = self.jumpSpeed - 9.8*dt
             if updated_z<=FLOOR_Z:
                 self.jumping=False
-        
+               
         
         change_vec+=Vec3(0,self.speed*dt,0)
-
+        self.plane.setPos(self.plane.getPos() + Vec3(0,self.speed*dt,0))
         self.sm.setPos(current_vec+change_vec)
         self.sm.setZ(updated_z)
 
