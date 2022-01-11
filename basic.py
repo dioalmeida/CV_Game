@@ -234,7 +234,7 @@ class MyApp(ShowBase):
         dt = ClockObject.getGlobalClock().dt
         self.cube.setZ(self.cube.getZ()+self.jumpSpeed*dt)
         if self.cube.getZ() > 0:
-            self.jumpSpeed = self.jumpSpeed - 9.8*dt*2 #faster 
+            self.jumpSpeed = self.jumpSpeed - 9.8*dt #faster 
         if self.cube.getZ() < 0:
             self.cube.setZ(0)
             self.jumpSpeed = 0

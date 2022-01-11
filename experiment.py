@@ -78,9 +78,13 @@ class Game(ShowBase):
     def add_lighting(self):
         self.alight = AmbientLight("alight")
         self.alight.setColor((0.2, 0.2, 0.2, 1))
-        self.alnp = self.render.attachNewNode(self.alight)
-        self.render.setLight(self.alnp)
-
+        
+        self.dlight = DirectionalLight("dlight")
+        self.dlight.setDirection(LVector3(0, 45, -45))
+        self.dlight.setColor((0.2, 0.2, 0.2, 1))
+        
+        self.render.setLight(self.render.attachNewNode(self.alight))
+        self.render.setLight(self.render.attachNewNode(self.dlight))
     def toggleCamera(self,state):
         if self.camState:
             self.dr.setCamera(self.cameraSide)
@@ -163,24 +167,31 @@ class Game(ShowBase):
         self.ground.setColor(0.2, 0.4, 0.8)
         self.ground.lookAt(0, 0, -1)
         groundGeom = OdePlaneGeom(self.space, Vec4(0, 0, 1, 0))
+        groundGeom.setCollideBits(BitMask32(0x00000001))
+        groundGeom.setCategoryBits(BitMask32(0x00000002))
 
     def add_map(self):
-        self.map = self.loader.loadModel("assets/map.glb")
+        self.map = self.loader.loadModel("assets/untitled.egg")
         # self.map = self.render.attachNewNode(MAP_TAG)
         self.map.setPos(0,6,1)
         self.map.reparentTo(self.render)
-        self.traps = self.loader.loadModel("assets/traps.glb")
+        modelTrimesh = OdeTriMeshData(self.map, True)
+        modelGeom = OdeTriMeshGeom(self.space, modelTrimesh)
+        #mapBody=OdeBody(self.odeWorld)
+        #mapMass = OdeMass()
+        
+        #self.traps = self.loader.loadModel("assets/traps.glb")
         # self.map = self.render.attachNewNode(MAP_TAG)
-        self.traps.setPos(0, 6, 1)
-        self.traps.reparentTo(self.render)
-        # body = OdeBody(self.odeWorld)
-        # mass = OdeMass()
+        #self.traps.setPos(0, 6, 1)
+        #self.traps.reparentTo(self.render)
+        #modelGeom.setCollideBits(0x00000001)
+        #modelGeom.setBody(mapBody)
         # # mass.setSphereTotal(10, 1)
         # mass.setBoxTotal(2000, 1, 1, 1)
         # body.setMass(mass)
         # body.setPosition(self.map.getPos())
         # geom = OdeSphereGeom(self.space, 1)
-        # geom.setBody(body)
+        
         # self.map.setPythonTag("body", body)
     def add_player(self):
         # self.testr = self.loader.loadModel("assets/cube.egg")
@@ -190,7 +201,8 @@ class Game(ShowBase):
         self.player = self.loader.loadModel("assets/cube.egg")
         self.sm = self.render.attachNewNode(PLAYER_TAG)
         # sm.setPos(random.uniform(-20, 20), random.uniform(-30, 30), random.uniform(10, 30))
-        self.sm.setPos(0,0, 0)
+        self.sm.setPos(0,-20, 0)
+        #self.sm.node().addSolid(CollisionBox(LPoint3(0.5,0.5,0.5)))
         self.player.instanceTo(self.sm)
         body = OdeBody(self.odeWorld)
         mass = OdeMass()
@@ -199,6 +211,9 @@ class Game(ShowBase):
         body.setMass(mass)
         body.setPosition(self.sm.getPos())
         geom = OdeBoxGeom(self.space, 1,1,1)
+        #self.sm.node().setFromCollideMask(GeomNode.getDefaultCollideMask())
+        geom.setCollideBits(BitMask32(0x00000002))
+        geom.setCategoryBits(BitMask32(0x00000001))
         geom.setBody(body)
         self.sm.setPythonTag("body", body)
 

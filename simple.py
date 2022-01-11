@@ -2,6 +2,7 @@
 import math
 import random
 
+from direct.gui.DirectGui import *
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
 from panda3d.core import *
@@ -62,17 +63,21 @@ class Game(ShowBase):
         self.accept("d-up", self.__update_keymap,["right",False])
         self.accept("e", self.toggleCamera,[self.camState])
         self.accept("space", self.__update_keymap,["jump",True])
+        self.accept("r", self.restart_game)
+    def restart_game(self): #simple just for debugging
+        self.sm.setPos(0,-40,FLOOR_Z)
     
     def add_player(self):
 
         self.player = self.loader.loadModel("assets/cube2.egg")
         self.sm = self.render.attachNewNode(PLAYER_TAG)
-        self.sm.setPos(0,-40, 1)
+        self.sm.setColor(0,255,0,0.5)
+        self.sm.setPos(0,-40, FLOOR_Z)
         self.colliderNode = CollisionNode("cPlayer")
 
         self.colliderNode.addSolid(CollisionBox(LPoint3(0,0,0),LPoint3(2,2,2))) # change later
         self.collider = self.sm.attachNewNode(self.colliderNode)
-        self.collider.show()
+        self.collider.show() #remove later
         
         self.player.instanceTo(self.sm)
         self.jumping=False
@@ -84,18 +89,41 @@ class Game(ShowBase):
         self.cTrav = CollisionTraverser()
         self.pusher = CollisionHandlerPusher()
         floor = self.render.attachNewNode(CollisionNode("floor"))
-        floor.node().addSolid(CollisionPlane(Plane(Vec3(0, 0, FLOOR_Z), Point3(0, 0, 0))))
+        floorColliderNode = CollisionNode("cFloor")
+        floorColliderNode.addSolid(CollisionPlane(Plane(Vec3(0, 0, FLOOR_Z), Point3(0, 0, 0))))
+        floor.setColor(0,0,255,0.5)
+        
+        
+        self.floorCollider = floor.attachNewNode(floorColliderNode)
+        self.floorCollider.show()
         self.plane = self.loader.loadModel("assets/floor.egg")
         self.plane.setPos(0,0,FLOOR_Z)
         self.plane.reparentTo(self.render)
+        self.plane.setColor(255,0,0,0.5)
 
-
-        self.map = self.loader.loadModel("assets/untitled.egg")
-        self.map.setPos(0,0,FLOOR_Z)
+        self.map = self.loader.loadModel("assets/testmap3.egg")
+        
+        self.map.setPos(1,0,2)
         self.map.reparentTo(self.render)
+        self.map.setColor(0,0,255,0.5)
+        self.traps = self.loader.loadModel("assets/traps.glb")
+        
+        self.traps.setPos(1,0,2)
+        self.traps.reparentTo(self.render)
+        self.traps.setColor(0,0,255,0.5)
+        """
+        
+        self.map2 = self.loader.loadModel("assets/untitled.egg")
+        self.map2.setPos(1,10,2)
+        self.map2.reparentTo(self.render)
+        self.map2.setColor(0,0,255,0.5)
+        """
+
         base.pusher.addCollider(self.collider, self.sm)
         base.cTrav.addCollider(self.collider, self.pusher)
-       
+        #base.pusher.addCollider(self.floorCollider, floor)
+        #base.cTrav.addCollider(self.floorCollider, self.pusher)
+
     def add_lighting(self):
         self.alight = AmbientLight("alight")
         self.alight.setColor((0.2, 0.2, 0.2, 1))
@@ -129,7 +157,7 @@ class Game(ShowBase):
 
         
 
-        self.cameraSide.setPos(self.sm.getX()+ CAMERA_DIST_X, self.sm.getY()-5, 3)
+        self.cameraSide.setPos(self.sm.getX()+ CAMERA_DIST_X, self.sm.getY()-5, 10)
         self.cameraSide.lookAt(self.sm)
         
 
