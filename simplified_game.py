@@ -98,14 +98,16 @@ class Game(ShowBase):
         
         self.colourTimer+=self.dt
         if self.colourTimer>2:
-            new_cube_colour = Vec4(*colours[random.randint(0,2)],1)
+            #new_cube_colour = Vec4(*colours[random.randint(0,2)],1)
+            new_cube_tex = self.all_tex[random.randint(0,2)]
             for wall in self.walls:
-                new_wall_colour = Vec4(*colours[random.randint(0,2)],1)
-                wall.setColor(new_wall_colour)
-                #if new_cube_colour== new_wall_colour:
-                    #print("same colour")
+                new_wall_tex = self.all_tex[random.randint(0,2)]
+                wall.setTexture(new_wall_tex)
+                if new_cube_tex== new_wall_tex:
+                    wall = self.loader.loadModel("assets/ghostwall_tex.egg")
+                    print("ldskfjdlskjf")
             self.colourTimer=0
-            self.sm.setColor(new_cube_colour)
+            self.sm.setTexture(new_cube_tex)
         return Task.cont
 
     
@@ -117,7 +119,7 @@ class Game(ShowBase):
         self.sm = self.render.attachNewNode(PLAYER_TAG)
         self.sm.setColor(*colours[0])
         self.sm.setPos(0,-40, FLOOR_Z)
-        cube_tex = self.loader.loadTexture('assets/brick.png')
+        cube_tex = self.loader.loadTexture('assets/tex/brick.png')
         self.sm.setTexture(cube_tex, 1)
         self.colliderNode = CollisionNode("cPlayer")
 
@@ -150,25 +152,34 @@ class Game(ShowBase):
         self.plane.setPos(5,20,-1)
         self.plane.reparentTo(self.render)
         self.plane.setColor(100,100,100,0.5)
-        tex = self.loader.loadTexture('assets/brick.png')
-        self.plane.setTexture(tex, 1)
+        tex_moon = self.loader.loadTexture('assets/tex/moon.png')
+        tex0 = self.loader.loadTexture('assets/tex/brick0.png')
+        tex1 = self.loader.loadTexture('assets/tex/brick1.png')
+        tex2 = self.loader.loadTexture('assets/tex/brick2.png')
+        self.all_tex = [tex0,tex1,tex2]
+        self.plane.setTexture(tex_moon, 1)
 
         wall_heights= [FLOOR_Z,FLOOR_Z+4]
         self.walls = []
         for i in range(20):
             #if random.randint(0,1):#ghost or regular wall
-            wall = self.loader.loadModel("assets/basewall.egg")
+            #wall = self.loader.loadModel("assets/basewall.egg")
+            wall = self.loader.loadModel("assets/wall_tex.egg")
             #else:
             #    wall = self.loader.loadModel("assets/ghostbasewall.egg")
             wall.setPos(random.randint(-4,2),12*(i+1),wall_heights[random.randint(0,(len(wall_heights))-1)])
             wall.reparentTo(self.render)
-            wall.setColor(Vec4(*colours[random.randint(0,2)],1))
+            #wall.setColor(Vec4(*colours[random.randint(0,2)],1))
             #tex = self.loader.loadTexture('assets/brick.png')
-            wall.setTexture(tex, 1)
-            #myMaterial = Material()
-            #myMaterial.setShininess(5.0) # Make this material shiny
-            #myMaterial.setAmbient((0, 0, 1, 1)) # Make this material blue
-            #wall.setMaterial(myMaterial) # Apply the material to this nodePath
+            
+            
+            
+            myMaterial = Material()
+            myMaterial.setShininess(5.0) # Make this material shiny
+            myMaterial.setAmbient((0, 0, 1, 1)) # Make this material blue
+            myMaterial.setDiffuse(Vec4(*colours[random.randint(0,2)],1))
+            wall.setMaterial(myMaterial) # Apply the material to this nodePath
+            wall.setTexture(self.all_tex[random.randint(0,2)], 1)
             self.walls.append(wall)
         
         self.pusher.addCollider(self.collider, self.sm)
@@ -184,9 +195,15 @@ class Game(ShowBase):
         self.dlight = DirectionalLight("dlight")
         self.dlight.setDirection(LVector3(0, 45, 45))
         self.dlight.setColor((0.2, 0.2, 0.2, .2))
+
+        plight = PointLight('plight')
+        plight.setColor((0.2, 0.2, 0.2, 1))
+        plnp = self.render.attachNewNode(plight)
+        plnp.setPos(0, 0, 0)
+        self.render.setLight(plnp)
         
         self.render.setLight(self.render.attachNewNode(self.alight))
-        self.render.setLight(self.render.attachNewNode(self.dlight))
+        #self.render.setLight(self.render.attachNewNode(self.dlight))
         self.render.setShaderAuto()
     
     def toggleCamera(self,state):
