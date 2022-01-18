@@ -44,9 +44,12 @@ class Game(ShowBase):
         self.ground = None
         self.contacts = None
         self.space = None
+        self.dt=0
+        self.colourTimer=0
         # Setup collision detection & physics
         self.add_player()
         self.setup_level()
+        self.add_lighting()
         # Setup game world and instances
         self.camState = True # true = behind, false = side
         self.dr = base.camNode.getDisplayRegion(0)
@@ -59,6 +62,7 @@ class Game(ShowBase):
         self.taskMgr.add(self.followCubeBehindTask, "followCubeBehindTask")
         self.taskMgr.add(self.followCubeSideTask, "followCubeSideTask")
         self.taskMgr.add(self.checkImpactTask,"checkImpactTask")
+        self.taskMgr.add(self.updateColoursTask,"updateColoursTask")
         self.taskMgr.add(self.updateScoreTask,"updateScoreTask")
 
        
@@ -89,18 +93,37 @@ class Game(ShowBase):
             self.scoreUI.setText(str(int(self.score/25)))
         return Task.cont
 
+    
+    def updateColoursTask(self, task):
+        
+        self.colourTimer+=self.dt
+        if self.colourTimer>2:
+            new_cube_colour = Vec4(*colours[random.randint(0,2)],1)
+            for wall in self.walls:
+                new_wall_colour = Vec4(*colours[random.randint(0,2)],1)
+                wall.setColor(new_wall_colour)
+                #if new_cube_colour== new_wall_colour:
+                    #print("same colour")
+            self.colourTimer=0
+            self.sm.setColor(new_cube_colour)
+        return Task.cont
 
+    
     def add_player(self):
 
-        self.player = self.loader.loadModel("assets/cube2.egg")
+        #self.player = self.loader.loadModel("assets/cube2.egg")
+        #self.player = self.loader.loadModel("assets/cube_tex.egg")
+        self.player = self.loader.loadModel("assets/textest.egg")
         self.sm = self.render.attachNewNode(PLAYER_TAG)
         self.sm.setColor(*colours[0])
         self.sm.setPos(0,-40, FLOOR_Z)
+        cube_tex = self.loader.loadTexture('assets/brick.png')
+        self.sm.setTexture(cube_tex, 1)
         self.colliderNode = CollisionNode("cPlayer")
 
         self.colliderNode.addSolid(CollisionBox(LPoint3(0,0,0),LPoint3(2,2,2))) # change later
         self.collider = self.sm.attachNewNode(self.colliderNode)
-        self.collider.show() #remove later
+        #self.collider.show() #remove later
         
         self.player.instanceTo(self.sm)
         self.jumping=False
@@ -122,21 +145,31 @@ class Game(ShowBase):
         
         
         self.floorCollider = floor.attachNewNode(floorColliderNode)
-        self.floorCollider.show()
+        #self.floorCollider.show()
         self.plane = self.loader.loadModel("assets/floorplane.egg")
         self.plane.setPos(5,20,-1)
         self.plane.reparentTo(self.render)
         self.plane.setColor(100,100,100,0.5)
+        tex = self.loader.loadTexture('assets/brick.png')
+        self.plane.setTexture(tex, 1)
 
         wall_heights= [FLOOR_Z,FLOOR_Z+4]
+        self.walls = []
         for i in range(20):
             #if random.randint(0,1):#ghost or regular wall
             wall = self.loader.loadModel("assets/basewall.egg")
             #else:
             #    wall = self.loader.loadModel("assets/ghostbasewall.egg")
-            wall.setPos(random.randint(-4,2),10*(i+1),wall_heights[random.randint(0,(len(wall_heights))-1)])
+            wall.setPos(random.randint(-4,2),12*(i+1),wall_heights[random.randint(0,(len(wall_heights))-1)])
             wall.reparentTo(self.render)
             wall.setColor(Vec4(*colours[random.randint(0,2)],1))
+            #tex = self.loader.loadTexture('assets/brick.png')
+            wall.setTexture(tex, 1)
+            #myMaterial = Material()
+            #myMaterial.setShininess(5.0) # Make this material shiny
+            #myMaterial.setAmbient((0, 0, 1, 1)) # Make this material blue
+            #wall.setMaterial(myMaterial) # Apply the material to this nodePath
+            self.walls.append(wall)
         
         self.pusher.addCollider(self.collider, self.sm)
         
@@ -146,14 +179,15 @@ class Game(ShowBase):
       
     def add_lighting(self):
         self.alight = AmbientLight("alight")
-        self.alight.setColor((0.2, 0.2, 0.2, 1))
+        self.alight.setColor((0.2, 0.2, 0.2, .2))
         
         self.dlight = DirectionalLight("dlight")
-        self.dlight.setDirection(LVector3(0, 45, -45))
-        self.dlight.setColor((0.2, 0.2, 0.2, 1))
+        self.dlight.setDirection(LVector3(0, 45, 45))
+        self.dlight.setColor((0.2, 0.2, 0.2, .2))
         
         self.render.setLight(self.render.attachNewNode(self.alight))
         self.render.setLight(self.render.attachNewNode(self.dlight))
+        self.render.setShaderAuto()
     
     def toggleCamera(self,state):
         if self.camState:
@@ -208,14 +242,14 @@ class Game(ShowBase):
         
         change_vec=Vec3(0,0,0)
        
-        dt = globalClock.getDt()
+        self.dt = globalClock.getDt()
         
         updated_z=FLOOR_Z
         if self.keymap["left"]:
-            change_vec+= Vec3(-self.speed*dt,0,0)
+            change_vec+= Vec3(-self.speed*self.dt,0,0)
             
         if self.keymap["right"]:
-            change_vec+= Vec3(self.speed*dt,0,0)
+            change_vec+= Vec3(self.speed*self.dt,0,0)
             
         #if self.keymap["jump"]:
         if self.jumping:
@@ -229,17 +263,20 @@ class Game(ShowBase):
                 self.jumpSpeed = 0
                 self.jumping = False
             """
-            updated_z=self.sm.getZ()+self.jumpSpeed*dt
-            self.jumpSpeed = self.jumpSpeed - 9.8*dt
+            updated_z=self.sm.getZ()+self.jumpSpeed*self.dt
+            self.jumpSpeed = self.jumpSpeed - 9.8*self.dt
             if updated_z<=FLOOR_Z:
                 self.jumping=False
                
         
-        change_vec+=Vec3(0,self.speed*dt,0)
-        self.plane.setPos(self.plane.getPos() + Vec3(0,self.speed*dt,0))
+        change_vec+=Vec3(0,self.speed*self.dt,0)
+        self.plane.setPos(self.plane.getPos() + Vec3(0,self.speed*self.dt,0))
         self.sm.setPos(current_vec+change_vec)
         self.sm.setZ(updated_z)
-
+        
+        curr_X = self.sm.getX()
+        if curr_X<=-7 or curr_X>=6:
+            self.restart_game()
 
         return task.cont
     
