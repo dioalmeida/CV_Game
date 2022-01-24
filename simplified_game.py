@@ -46,6 +46,9 @@ class Game(ShowBase):
         self.space = None
         self.dt=0
         self.colourTimer=0
+        self.closestWall=None
+        self.cubeColourIndex=0
+        self.wallTexDict={}
         # Setup collision detection & physics
         self.add_player()
         self.setup_level()
@@ -61,9 +64,10 @@ class Game(ShowBase):
         self.dr.setCamera(self.cameraBehind)
         self.taskMgr.add(self.followCubeBehindTask, "followCubeBehindTask")
         self.taskMgr.add(self.followCubeSideTask, "followCubeSideTask")
-        self.taskMgr.add(self.checkImpactTask,"checkImpactTask")
+        self.taskMgr.add(self.checkImpactTask2,"checkImpactTask2")
         self.taskMgr.add(self.updateColoursTask,"updateColoursTask")
         self.taskMgr.add(self.updateScoreTask,"updateScoreTask")
+        self.taskMgr.add(self.closestWallTask,"closestWallTask")
 
        
 
@@ -85,7 +89,8 @@ class Game(ShowBase):
         scores.append(int(self.score/25))
         print(scores)
         self.score=0
-       
+        for wall in self.walls:
+            wall.reparentTo(self.render)
 
     def updateScoreTask(self, task):
         self.score +=1
@@ -103,11 +108,12 @@ class Game(ShowBase):
             for wall in self.walls:
                 new_wall_tex = self.all_tex[random.randint(0,2)]
                 wall.setTexture(new_wall_tex)
-                if new_cube_tex== new_wall_tex:
-                    wall = self.loader.loadModel("assets/ghostwall_tex.egg")
-                    print("ldskfjdlskjf")
+                self.wallTexDict[wall.getY()]=new_wall_tex
+                #if new_cube_tex== new_wall_tex:
+                    
             self.colourTimer=0
             self.sm.setTexture(new_cube_tex)
+            self.cubeColourIndex=new_cube_tex
         return Task.cont
 
     
@@ -164,7 +170,7 @@ class Game(ShowBase):
         for i in range(20):
             #if random.randint(0,1):#ghost or regular wall
             #wall = self.loader.loadModel("assets/basewall.egg")
-            wall = self.loader.loadModel("assets/wall_tex.egg")
+            wall = self.loader.loadModel("assets/ghostwall_tex.egg")
             #else:
             #    wall = self.loader.loadModel("assets/ghostbasewall.egg")
             wall.setPos(random.randint(-4,2),12*(i+1),wall_heights[random.randint(0,(len(wall_heights))-1)])
@@ -177,17 +183,38 @@ class Game(ShowBase):
             myMaterial = Material()
             myMaterial.setShininess(5.0) # Make this material shiny
             myMaterial.setAmbient((0, 0, 1, 1)) # Make this material blue
-            myMaterial.setDiffuse(Vec4(*colours[random.randint(0,2)],1))
+            colour=Vec4(*colours[random.randint(0,2)],1)
+            myMaterial.setDiffuse(colour)
             wall.setMaterial(myMaterial) # Apply the material to this nodePath
-            wall.setTexture(self.all_tex[random.randint(0,2)], 1)
+            texture_index = random.randint(0,2)
+            wall.setTexture(self.all_tex[texture_index], 1)
             self.walls.append(wall)
+            self.wallTexDict[12*(i+1)]=texture_index
         
         self.pusher.addCollider(self.collider, self.sm)
         
         
         self.cTrav.addCollider(self.collider, self.pusher)
         
-      
+    def closestWallTask(self, task):
+        dist=1000
+        closest=None
+        
+        for wall in self.walls:
+            #self.walls.remove()
+            curr_dist = wall.getY() - self.sm.getY()
+            if curr_dist>=0 and curr_dist< dist:
+                dist=curr_dist
+                closest=wall
+            if curr_dist>=0:
+                #self.walls.append((wall,tex))
+                pass
+            elif curr_dist<-7:
+                wall.detachNode()
+        self.closestWall = closest
+        #moontex=self.loader.loadTexture('assets/tex/moon.png')
+        #closest.setTexture(moontex,1)
+        return Task.cont  
     def add_lighting(self):
         self.alight = AmbientLight("alight")
         self.alight.setColor((0.2, 0.2, 0.2, .2))
@@ -227,7 +254,9 @@ class Game(ShowBase):
         return Task.cont
     
     def checkImpactTask(self, task):
+        ####check closest wall
         if self.sm.getY() == self.lastY:
+            #if self.cubeColourIndex!=self.wallTexDict[self.lastY]:
             self.restart_game()
         if self.sm.getZ() == self.lastZ and self.lastZ>1:
             self.jumping=False
@@ -238,6 +267,29 @@ class Game(ShowBase):
             self.lastX= self.sm.getX()
             self.lastY = self.sm.getY()
             self.lastZ = self.sm.getZ()
+        return Task.cont
+    
+    
+    def checkImpactTask2(self, task):
+        ####check closest wall
+        if self.closestWall:
+            if (self.sm.getY() >= self.closestWall.getY()-3 and self.sm.getY() <= self.closestWall.getY()):
+                
+                if  (self.sm.getZ() >= self.closestWall.getZ()-3 and self.sm.getZ() <= self.closestWall.getZ()):
+                    self.restart_game()
+                elif  (self.sm.getX() >= self.closestWall.getX()-3 and self.sm.getX() <= self.closestWall.getX()):
+                    pass
+                if self.cubeColourIndex!=self.wallTexDict[self.lastY]:
+                    self.restart_game()
+            #if self.sm.getZ() == self.lastZ and self.lastZ>1:
+            #    self.jumping=False
+            #    self.restart_game()
+            #if self.camState and (self.keymap["left"] or self.keymap["right"]) and self.sm.getX()==self.lastX:
+            #    self.restart_game()
+            #else:    
+            #    self.lastX= self.sm.getX()
+            #    self.lastY = self.sm.getY()
+            #    self.lastZ = self.sm.getZ()
         return Task.cont
     
     def followCubeSideTask(self, task):
