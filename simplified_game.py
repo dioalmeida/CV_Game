@@ -137,7 +137,7 @@ class Game(ShowBase):
         self.jumping=False
         self.jumpSpeed=0
         self.lastX=-1
-        self.lastY=-1
+        self.lastY=12
         self.lastZ=-1
         
         
@@ -275,21 +275,14 @@ class Game(ShowBase):
         if self.closestWall:
             if (self.sm.getY() >= self.closestWall.getY()-3 and self.sm.getY() <= self.closestWall.getY()):
                 
-                if  (self.sm.getZ() >= self.closestWall.getZ()-3 and self.sm.getZ() <= self.closestWall.getZ()):
-                    self.restart_game()
-                elif  (self.sm.getX() >= self.closestWall.getX()-3 and self.sm.getX() <= self.closestWall.getX()):
-                    pass
-                if self.cubeColourIndex!=self.wallTexDict[self.lastY]:
-                    self.restart_game()
-            #if self.sm.getZ() == self.lastZ and self.lastZ>1:
-            #    self.jumping=False
-            #    self.restart_game()
-            #if self.camState and (self.keymap["left"] or self.keymap["right"]) and self.sm.getX()==self.lastX:
-            #    self.restart_game()
-            #else:    
-            #    self.lastX= self.sm.getX()
-            #    self.lastY = self.sm.getY()
-            #    self.lastZ = self.sm.getZ()
+                if  (self.sm.getZ() >= self.closestWall.getZ()-3 and self.sm.getZ() <= self.closestWall.getZ()) and (self.sm.getX() >= self.closestWall.getX()-3 and self.sm.getX() <= self.closestWall.getX()):
+                    if self.cubeColourIndex!=self.wallTexDict[self.closestWall.getY()]:#[self.lastY]:
+                        self.restart_game()
+                #elif  (self.sm.getX() >= self.closestWall.getX()-3 and self.sm.getX() <= self.closestWall.getX()):
+                #    if self.cubeColourIndex!=self.wallTexDict[self.closestWall.getY()]:#[self.lastY]:
+                #        self.restart_game()
+                
+            
         return Task.cont
     
     def followCubeSideTask(self, task):
