@@ -125,9 +125,10 @@ class Game(ShowBase):
         scores.append(int(self.score/25))
         print(scores)
         self.score=0
+        self.wallsActive = []
         for wall in self.walls:
             wall.reparentTo(self.render)
-        self.wallActive = self.walls
+            self.wallsActive.append(wall)
     def updateScoreTask(self, task):
         self.score +=1
         if self.score%25==0:
@@ -244,13 +245,16 @@ class Game(ShowBase):
             if curr_dist>=0 and curr_dist< dist:
                 dist=curr_dist
                 closest=wall
-            if curr_dist>=0:
+            #if curr_dist>=0:
                 #self.walls.append((wall,tex))
-                pass
+            #    pass
             elif curr_dist<-7:
                 wall.detachNode()
                 self.wallsActive.remove(wall)
         self.closestWall = closest
+        #moon =  self.loader.loadTexture('assets/tex/moon.png')
+        #if self.closestWall:
+        #    self.closestWall.setTexture(moon)
         #moontex=self.loader.loadTexture('assets/tex/moon.png')
         #closest.setTexture(moontex,1)
         return Task.cont  
@@ -324,9 +328,9 @@ class Game(ShowBase):
     def checkImpactTask2(self, task):
         
         if self.closestWall:
-            if (self.sm.getY() >= self.closestWall.getY()-3 and self.sm.getY() <= self.closestWall.getY()):
+            if (self.sm.getY() >= self.closestWall.getY()-3 and self.sm.getY() <= self.closestWall.getY()+1):
                 
-                if  (self.sm.getZ() >= self.closestWall.getZ()-3 and self.sm.getZ() <= self.closestWall.getZ()) and (self.sm.getX() >= self.closestWall.getX()-3 and self.sm.getX() <= self.closestWall.getX()):
+                if  (self.sm.getZ() >= self.closestWall.getZ()-1 and self.sm.getZ() <= self.closestWall.getZ()+1) and (self.sm.getX() >= self.closestWall.getX()-3 and self.sm.getX() <= self.closestWall.getX()+3):
                     #if self.cubeColourIndex!=self.wallTexDict[self.closestWall.getY()]:#[self.lastY]:
                     if self.sm.getTexture()!=self.closestWall.getTexture():#[self.lastY]:
                         self.restart_game()
