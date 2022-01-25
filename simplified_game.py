@@ -118,7 +118,7 @@ class Game(ShowBase):
         """
 
     def restart_game(self): 
-        self.sm.setPos(0,-40,FLOOR_Z)
+        self.sm.setPos(0,-50,FLOOR_Z)
         self.plane.setPos(5,20,-1)
         self.nyancat.setPos(-10,50,0)
         self.nyancatSide.setPos(-50,-20,0)
@@ -161,7 +161,7 @@ class Game(ShowBase):
         self.player = self.loader.loadModel("assets/textest.egg")
         self.sm = self.render.attachNewNode(PLAYER_TAG)
         self.sm.setColor(*colours[0])
-        self.sm.setPos(0,-40, FLOOR_Z)
+        self.sm.setPos(0,-50, FLOOR_Z)
         cube_tex = self.loader.loadTexture('assets/tex/brick.png')
         self.sm.setTexture(cube_tex, 1)
         self.colliderNode = CollisionNode("cPlayer")
@@ -194,8 +194,9 @@ class Game(ShowBase):
         self.plane = self.loader.loadModel("assets/floorplane.egg")
         self.plane.setPos(5,20,-1)
         self.plane.reparentTo(self.render)
-        self.plane.setColor(100,100,100,0.5)
+        self.plane.setColor(0,0,255,0.5)
         tex_moon = self.loader.loadTexture('assets/tex/moon.png')
+        self.plane.setTexture(tex_moon)
         tex0 = self.loader.loadTexture('assets/tex/brick0.png')
         tex1 = self.loader.loadTexture('assets/tex/brick1.png')
         tex2 = self.loader.loadTexture('assets/tex/brick2.png')
