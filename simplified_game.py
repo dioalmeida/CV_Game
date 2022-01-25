@@ -29,7 +29,7 @@ class Game(ShowBase):
 
     def __init__(self):
         super().__init__()
-       
+        self.load_back()
         # Variable declaration
         self.speed = SPEED
         self.jump = 0
@@ -84,8 +84,44 @@ class Game(ShowBase):
         self.accept("space", self.__update_keymap,["jump",True])
         self.accept("r", self.restart_game)
 
+
+    def load_back(self):
+        """
+        myImage=PNMImage()
+        myImage.read(Filename("assets/nyancat.gif"))
+        back_tex = Texture()
+        back_tex.load(myImage)
+        self.skybox = self.loader.loadModel("assets/cube2")
+        self.skybox.setPos(-100,1000,10)
+        self.skybox.reparentTo(self.render)
+        #self.skybox.setColor(100,100,100,0.5)
+        self.skybox.setScale(100)
+        self.skybox.setTwoSided(True)
+        self.skybox.setTexture(back_tex)
+        """
+        self.nyancat = self.loader.loadModel("assets/nyancat/textest")
+        self.nyancat.setPos(-10,50,0)
+        self.nyancat.setScale(100)
+        self.nyancat.reparentTo(self.render)
+        self.nyancatSide = self.loader.loadModel("assets/nyancat/textest")
+        self.nyancatSide.setPos(-50,-20,0)
+        self.nyancatSide.setScale(100)
+        self.nyancatSide.setHpr(self.nyancatSide, (90,0,0))
+        self.nyancatSide.reparentTo(self.render)
+        """
+        skybox = loader.loadModel("assets/test.egg")
+        skybox.setScale(512)
+        skybox.setBin('background', 1)
+        skybox.setDepthWrite(0)
+        skybox.setLightOff()
+        skybox.reparentTo(render)
+        """
+
     def restart_game(self): 
         self.sm.setPos(0,-40,FLOOR_Z)
+        self.plane.setPos(5,20,-1)
+        self.nyancat.setPos(-10,50,0)
+        self.nyancatSide.setPos(-50,-20,0)
         scores.append(int(self.score/25))
         print(scores)
         self.score=0
@@ -216,8 +252,10 @@ class Game(ShowBase):
         #closest.setTexture(moontex,1)
         return Task.cont  
     def add_lighting(self):
+        
         self.alight = AmbientLight("alight")
-        self.alight.setColor((0.2, 0.2, 0.2, .2))
+        self.alight.setColor((255, 255, 255, .2))
+        """
         
         self.dlight = DirectionalLight("dlight")
         self.dlight.setDirection(LVector3(0, 45, 45))
@@ -228,9 +266,18 @@ class Game(ShowBase):
         plnp = self.render.attachNewNode(plight)
         plnp.setPos(0, 0, 0)
         self.render.setLight(plnp)
+        """
         
         self.render.setLight(self.render.attachNewNode(self.alight))
         #self.render.setLight(self.render.attachNewNode(self.dlight))
+        slight = Spotlight('slight')
+        slight.setColor((255, 255, 255, 0.5))
+        lens = PerspectiveLens()
+        slight.setLens(lens)
+        self.slnp = self.render.attachNewNode(slight)
+        self.slnp.setPos(0, self.sm.getY()-CAMERA_DIST_Y, 100)
+        self.slnp.lookAt(self.sm)
+        self.render.setLight(self.slnp)
         self.render.setShaderAuto()
     
     def toggleCamera(self,state):
@@ -247,6 +294,7 @@ class Game(ShowBase):
 
         self.cameraBehind.setPos(self.sm.getX(), self.sm.getY()-CAMERA_DIST_Y, CAMERA_DIST_Z)
         self.cameraBehind.lookAt(self.sm)
+        #self.slnp.lookAt(self.sm)
         
 
     
@@ -271,16 +319,14 @@ class Game(ShowBase):
     
     
     def checkImpactTask2(self, task):
-        ####check closest wall
+        
         if self.closestWall:
             if (self.sm.getY() >= self.closestWall.getY()-3 and self.sm.getY() <= self.closestWall.getY()):
                 
                 if  (self.sm.getZ() >= self.closestWall.getZ()-3 and self.sm.getZ() <= self.closestWall.getZ()) and (self.sm.getX() >= self.closestWall.getX()-3 and self.sm.getX() <= self.closestWall.getX()):
                     if self.cubeColourIndex!=self.wallTexDict[self.closestWall.getY()]:#[self.lastY]:
                         self.restart_game()
-                #elif  (self.sm.getX() >= self.closestWall.getX()-3 and self.sm.getX() <= self.closestWall.getX()):
-                #    if self.cubeColourIndex!=self.wallTexDict[self.closestWall.getY()]:#[self.lastY]:
-                #        self.restart_game()
+                
                 
             
         return Task.cont
@@ -290,6 +336,8 @@ class Game(ShowBase):
         
 
         self.cameraSide.setPos(self.sm.getX()+ CAMERA_DIST_X, self.sm.getY()-5, CAMERA_DIST_Z)
+        #self.slnp.setPos(self.sm.getX()+ CAMERA_DIST_X, self.sm.getY()-5,100)
+        #self.slnp.lookAt(self.sm)
         self.cameraSide.lookAt(self.sm)
         
 
@@ -316,15 +364,7 @@ class Game(ShowBase):
         #if self.keymap["jump"]:
         if self.jumping:
        
-            """
-            updated_z=self.sm.getZ()+self.jumpSpeed*dt
-            if updated_z > FLOOR_Z:
-                self.jumpSpeed = self.jumpSpeed - 9.8*dt #faster 
-            if updated_z < FLOOR_Z:
-                updated_z=FLOOR_Z
-                self.jumpSpeed = 0
-                self.jumping = False
-            """
+           
             updated_z=self.sm.getZ()+self.jumpSpeed*self.dt
             self.jumpSpeed = self.jumpSpeed - 9.8*self.dt
             if updated_z<=FLOOR_Z:
@@ -337,15 +377,19 @@ class Game(ShowBase):
         self.sm.setZ(updated_z)
         
         curr_X = self.sm.getX()
-        if curr_X<=-7 or curr_X>=6:
+        if curr_X<=-7 or curr_X>=5.90:
             self.restart_game()
+        self.slnp.setPos(self.slnp.getPos() + Vec3(0,self.speed*self.dt,0))
+        self.slnp.lookAt(self.sm)
+        self.nyancat.setPos(self.nyancat.getPos() + Vec3(0,self.speed*self.dt,0))
+        self.nyancatSide.setPos(self.nyancatSide.getPos() + Vec3(0,self.speed*self.dt,0))
 
         return task.cont
     
     def __update_keymap(self,key,state):
         if key in ["left", "right"] and self.camState:
             self.keymap[key] = state
-        if self.jumping==False and key=="jump" and not self.camState:
+        if self.jumping==False and key=="jump":# and not self.camState:
             self.keymap[key] = state
             self.jumping=True
             self.jumpSpeed=JUMP_SPEED
