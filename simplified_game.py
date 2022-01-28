@@ -1,7 +1,7 @@
 #  Dev Team: Diogo Almeida, Rodrigo Ferreira & Luís Laranjeira
 import math
 import random
-
+import threading
 from direct.gui.DirectGui import *
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
@@ -9,6 +9,8 @@ from direct.task import Task
 from panda3d.core import *
 from panda3d.ode import *
 from panda3d.physics import *
+import mediapipe_hands
+import cv2
 #import gltf
 random.seed(11)
 PLAYER_TAG = "player-instance"
@@ -20,10 +22,15 @@ FLOOR_Z=1
 scores=[]
 #colours=[(84,206,145),(120,84,206),(206,84,116)]
 colours=[(255,255,0),(0,255,255),(255,0,255)]
+
 zones = [0,1,2]
 CAMERA_DIST_X = 40
 CAMERA_DIST_Y = 50
 CAMERA_DIST_Z= 10
+
+HAND_MODE=1
+
+
 class Game(ShowBase):
           
 
@@ -69,36 +76,29 @@ class Game(ShowBase):
         self.taskMgr.add(self.updateColoursTask,"updateColoursTask")
         self.taskMgr.add(self.updateScoreTask,"updateScoreTask")
 
-       
+        if HAND_MODE:
+            self.hand_detection = mediapipe_hands.detection()
+            self.taskMgr.add(self.detectHandTask,"detectHandTask")
+            #self.taskMgr.doMethodLater(0.2, self.detectHandTask, 'detectHandTask')
+            
+          
 
         # Start tasks
         self.taskMgr.add(self.update_ode, "UpdateODE")
 
         # register event handlers
         self.keymap = {"left":False,"right":False,"jump":False}
-        self.accept("a", self.__update_keymap,["left",True])  # , ["w"])
-        self.accept("a-up", self.__update_keymap,["left",False])
-        self.accept("d", self.__update_keymap,["right",True])
-        self.accept("d-up", self.__update_keymap,["right",False])
+        self.accept("a", self.update_keymap,["left",True])  # , ["w"])
+        self.accept("a-up", self.update_keymap,["left",False])
+        self.accept("d", self.update_keymap,["right",True])
+        self.accept("d-up", self.update_keymap,["right",False])
         self.accept("e", self.toggleCamera,[self.camState])
-        self.accept("space", self.__update_keymap,["jump",True])
+        self.accept("space", self.update_keymap,["jump",True])
         self.accept("r", self.restart_game)
 
 
     def load_back(self):
-        """
-        myImage=PNMImage()
-        myImage.read(Filename("assets/nyancat.gif"))
-        back_tex = Texture()
-        back_tex.load(myImage)
-        self.skybox = self.loader.loadModel("assets/cube2")
-        self.skybox.setPos(-100,1000,10)
-        self.skybox.reparentTo(self.render)
-        #self.skybox.setColor(100,100,100,0.5)
-        self.skybox.setScale(100)
-        self.skybox.setTwoSided(True)
-        self.skybox.setTexture(back_tex)
-        """
+        
         self.nyancat = self.loader.loadModel("assets/nyancat/textest")
         self.nyancat.setPos(-10,50,0)
         self.nyancat.setScale(100)
@@ -108,14 +108,7 @@ class Game(ShowBase):
         self.nyancatSide.setScale(100)
         self.nyancatSide.setHpr(self.nyancatSide, (90,0,0))
         self.nyancatSide.reparentTo(self.render)
-        """
-        skybox = loader.loadModel("assets/test.egg")
-        skybox.setScale(512)
-        skybox.setBin('background', 1)
-        skybox.setDepthWrite(0)
-        skybox.setLightOff()
-        skybox.reparentTo(render)
-        """
+        
 
     def restart_game(self): 
         self.sm.setPos(0,-50,FLOOR_Z)
@@ -129,12 +122,21 @@ class Game(ShowBase):
         for wall in self.walls:
             wall.reparentTo(self.render)
             self.wallsActive.append(wall)
+
     def updateScoreTask(self, task):
         self.score +=1
         if self.score%25==0:
             self.scoreUI.setText(str(int(self.score/25)))
         return Task.cont
 
+    def detectHandTask(self, task):
+        
+        handDecision = self.hand_detection.get_frame()
+        self.update_keymap("left", bool(handDecision["Left"]))
+        self.update_keymap("right", bool(handDecision["Right"]))
+        self.update_keymap("jump", bool(handDecision["Jump"]))
+        return Task.cont
+        #return Task.again
     
     def updateColoursTask(self, task):
         
@@ -173,10 +175,7 @@ class Game(ShowBase):
         self.player.instanceTo(self.sm)
         self.jumping=False
         self.jumpSpeed=0
-        self.lastX=-1
-        self.lastY=12
-        self.lastZ=-1
-        
+       
         
         
     def setup_level(self):
@@ -241,24 +240,19 @@ class Game(ShowBase):
         closest=None
         
         for wall in self.wallsActive:
-            #self.walls.remove()
+            
             curr_dist = wall.getY() - self.sm.getY()
             if curr_dist>=0 and curr_dist< dist:
                 dist=curr_dist
                 closest=wall
-            #if curr_dist>=0:
-                #self.walls.append((wall,tex))
-            #    pass
+            
             elif curr_dist<-7:
                 wall.detachNode()
                 self.wallsActive.remove(wall)
         self.closestWall = closest
-        #moon =  self.loader.loadTexture('assets/tex/moon.png')
-        #if self.closestWall:
-        #    self.closestWall.setTexture(moon)
-        #moontex=self.loader.loadTexture('assets/tex/moon.png')
-        #closest.setTexture(moontex,1)
+       
         return Task.cont  
+
     def add_lighting(self):
         
         self.alight = AmbientLight("alight")
@@ -277,13 +271,13 @@ class Game(ShowBase):
         """
         
         self.render.setLight(self.render.attachNewNode(self.alight))
-        #self.render.setLight(self.render.attachNewNode(self.dlight))
+        
         slight = Spotlight('slight')
-        slight.setColor((255, 255, 255, 0.5))
+        slight.setColor((0, 0, 255, 0.5))
         lens = PerspectiveLens()
         slight.setLens(lens)
         self.slnp = self.render.attachNewNode(slight)
-        self.slnp.setPos(0, self.sm.getY()-CAMERA_DIST_Y, 100)
+        self.slnp.setPos(0, self.sm.getY()-CAMERA_DIST_Y, 1000)
         self.slnp.lookAt(self.sm)
         self.render.setLight(self.slnp)
         self.render.setShaderAuto()
@@ -302,28 +296,14 @@ class Game(ShowBase):
 
         self.cameraBehind.setPos(self.sm.getX(), self.sm.getY()-CAMERA_DIST_Y, CAMERA_DIST_Z)
         self.cameraBehind.lookAt(self.sm)
-        #self.slnp.lookAt(self.sm)
+       
         
 
     
 
         return Task.cont
     
-    def checkImpactTask(self, task):
-        ####check closest wall
-        if self.sm.getY() == self.lastY:
-            #if self.cubeColourIndex!=self.wallTexDict[self.lastY]:
-            self.restart_game()
-        if self.sm.getZ() == self.lastZ and self.lastZ>1:
-            self.jumping=False
-            self.restart_game()
-        #if self.camState and (self.keymap["left"] or self.keymap["right"]) and self.sm.getX()==self.lastX:
-        #    self.restart_game()
-        else:    
-            self.lastX= self.sm.getX()
-            self.lastY = self.sm.getY()
-            self.lastZ = self.sm.getZ()
-        return Task.cont
+    
     
     
     def checkImpactTask2(self, task):
@@ -332,8 +312,8 @@ class Game(ShowBase):
             if (self.sm.getY() >= self.closestWall.getY()-3 and self.sm.getY() <= self.closestWall.getY()+1):
                 
                 if  (self.sm.getZ() >= self.closestWall.getZ()-1 and self.sm.getZ() <= self.closestWall.getZ()+1) and (self.sm.getX() >= self.closestWall.getX()-3 and self.sm.getX() <= self.closestWall.getX()+3):
-                    #if self.cubeColourIndex!=self.wallTexDict[self.closestWall.getY()]:#[self.lastY]:
-                    if self.sm.getTexture()!=self.closestWall.getTexture():#[self.lastY]:
+                  
+                    if self.sm.getTexture()!=self.closestWall.getTexture():
                         self.restart_game()
                 
                 
@@ -345,8 +325,7 @@ class Game(ShowBase):
         
 
         self.cameraSide.setPos(self.sm.getX()+ CAMERA_DIST_X, self.sm.getY()-5, CAMERA_DIST_Z)
-        #self.slnp.setPos(self.sm.getX()+ CAMERA_DIST_X, self.sm.getY()-5,100)
-        #self.slnp.lookAt(self.sm)
+       
         self.cameraSide.lookAt(self.sm)
         
 
@@ -370,7 +349,7 @@ class Game(ShowBase):
         if self.keymap["right"]:
             change_vec+= Vec3(self.speed*self.dt,0,0)
             
-        #if self.keymap["jump"]:
+       
         if self.jumping:
        
            
@@ -388,17 +367,19 @@ class Game(ShowBase):
         curr_X = self.sm.getX()
         if curr_X<=-7 or curr_X>=5.90:
             self.restart_game()
-        self.slnp.setPos(self.slnp.getPos() + Vec3(0,self.speed*self.dt,0))
-        self.slnp.lookAt(self.sm)
+
         self.nyancat.setPos(self.nyancat.getPos() + Vec3(0,self.speed*self.dt,0))
         self.nyancatSide.setPos(self.nyancatSide.getPos() + Vec3(0,self.speed*self.dt,0))
+        ##experiments
+        self.slnp.setPos(self.slnp.getPos() + Vec3(0,self.speed*self.dt,0))
+        self.slnp.lookAt(self.sm)
 
         return task.cont
     
-    def __update_keymap(self,key,state):
+    def update_keymap(self,key,state):
         if key in ["left", "right"] and self.camState:
             self.keymap[key] = state
-        if self.jumping==False and key=="jump":# and not self.camState:
+        if self.jumping==False and key=="jump" and state==True:
             self.keymap[key] = state
             self.jumping=True
             self.jumpSpeed=JUMP_SPEED
