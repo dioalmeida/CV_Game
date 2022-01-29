@@ -28,7 +28,7 @@ CAMERA_DIST_X = 40
 CAMERA_DIST_Y = 50
 CAMERA_DIST_Z= 10
 INITIAL_ALIGHT=(255,255,255,0.2)
-INITIAL_SLIGHT=(0,0,255,0.5)
+INITIAL_SLIGHT=(0,0,255,0.8)
 
 HAND_MODE=0
 
@@ -283,7 +283,8 @@ class Game(ShowBase):
         
         self.floorCollider = floor.attachNewNode(floorColliderNode)
         #self.floorCollider.show()
-        self.plane = self.loader.loadModel("assets/floorplane.egg")
+        #self.plane = self.loader.loadModel("assets/floorplane.egg")
+        self.plane = self.loader.loadModel("assets/new_floor.egg")
         self.plane.setPos(5,20,-1)
         self.plane.reparentTo(self.render)
         self.plane.setColor(0,0,255,0.5)
@@ -300,8 +301,8 @@ class Game(ShowBase):
         self.wallsActive = []
         for i in range(50):
             #if random.randint(0,1):#ghost or regular wall
-            #wall = self.loader.loadModel("assets/untitled.egg")
-            wall = self.loader.loadModel("assets/ghostwall_tex.egg")
+            wall = self.loader.loadModel("assets/WALL_NEW.egg")
+            #wall = self.loader.loadModel("assets/ghostwall_tex.egg")
             #else:
             #    wall = self.loader.loadModel("assets/ghostbasewall.egg")
             wall.setPos(random.randint(-4,2),12*(i+1),wall_heights[random.randint(0,(len(wall_heights))-1)])
@@ -313,7 +314,7 @@ class Game(ShowBase):
             
             myMaterial = Material()
             myMaterial.setShininess(5) # Make this material shiny
-            myMaterial.setAmbient((0, 0, 1, 1)) # Make this material blue
+            myMaterial.setAmbient((0, 0, 255, 1)) # Make this material blue
             myMaterial.setBaseColor((255,0,0,1))
             myMaterial.setEmission((255,0,0,1))
             #myMaterial.setSpecular((255,0,0,.1))
@@ -326,6 +327,7 @@ class Game(ShowBase):
             self.wallsActive.append(wall)
             texture_index = random.randint(0,2)
             wall.setTexture(self.all_tex[texture_index], 1)
+            #wall.setTexture(tex_moon, 0)
             self.wallTexDict[12*(i+1)]=texture_index
         
         self.pusher.addCollider(self.collider, self.sm)
