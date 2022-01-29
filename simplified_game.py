@@ -48,7 +48,8 @@ class Game(ShowBase):
         self.score=0
         self.scoreUI = OnscreenText(text = "0",
                             pos = (-1.3, 0.825),
-                            fg=(255,190,203,1),
+                            fg=(199,21,133,1),
+                            bg=(0,0,255,1),
                             mayChange = True,
                             scale=(0.2),
                             align = TextNode.ALeft)
@@ -299,7 +300,7 @@ class Game(ShowBase):
         self.wallsActive = []
         for i in range(50):
             #if random.randint(0,1):#ghost or regular wall
-            #wall = self.loader.loadModel("assets/basewall.egg")
+            #wall = self.loader.loadModel("assets/untitled.egg")
             wall = self.loader.loadModel("assets/ghostwall_tex.egg")
             #else:
             #    wall = self.loader.loadModel("assets/ghostbasewall.egg")
@@ -310,20 +311,21 @@ class Game(ShowBase):
             
             
             
-            texture_index = random.randint(0,2)
-            #wall.setTexture(self.all_tex[texture_index], 1)
             myMaterial = Material()
             myMaterial.setShininess(5) # Make this material shiny
             myMaterial.setAmbient((0, 0, 1, 1)) # Make this material blue
             myMaterial.setBaseColor((255,0,0,1))
             myMaterial.setEmission((255,0,0,1))
             #myMaterial.setSpecular((255,0,0,.1))
-            colour=Vec4(*colours[random.randint(0,2)],1)
+            #colour=Vec4(*colours[random.randint(0,2)],0.05)
+            colour=Vec4(*colours[random.randint(0,2)],.1)
             
             myMaterial.setDiffuse(colour)
             wall.setMaterial(myMaterial) # Apply the material to this nodePath
             self.walls.append(wall)
             self.wallsActive.append(wall)
+            texture_index = random.randint(0,2)
+            wall.setTexture(self.all_tex[texture_index], 1)
             self.wallTexDict[12*(i+1)]=texture_index
         
         self.pusher.addCollider(self.collider, self.sm)
