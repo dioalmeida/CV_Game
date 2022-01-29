@@ -27,8 +27,10 @@ zones = [0,1,2]
 CAMERA_DIST_X = 40
 CAMERA_DIST_Y = 50
 CAMERA_DIST_Z= 10
+INITIAL_ALIGHT=(255,255,255,0.2)
+INITIAL_SLIGHT=(0,0,255,0.5)
 
-HAND_MODE=1
+HAND_MODE=0
 
 
 class Game(ShowBase):
@@ -46,14 +48,27 @@ class Game(ShowBase):
         self.score=0
         self.scoreUI = OnscreenText(text = "0",
                             pos = (-1.3, 0.825),
+                            fg=(255,190,203,1),
                             mayChange = True,
+                            scale=(0.2),
                             align = TextNode.ALeft)
+        self.zoneBuff = OnscreenText(text = "",    
+            fg=(255,255,255,1),
+            bg=(0,0,0,0.5),
+            pos=(0,0.8),
+            scale=(0.2),
+            mayChange = True,
+            align = TextNode.ACenter)
         self.ground = None
         self.contacts = None
         self.space = None
         self.dt=0
+        self.reverse=0
         self.colourTimer=0
         self.closestWall=None
+        self.currentZone=-1
+        self.zoneChanges=["CAMERA CHANGE", "SPEEDING UP", "LIGHTS OUT", "REVERSE CONTROLS", "REVERSE CONTROLS"]
+        self.zones=[(50,90),(110,250), (270, 350),(400,500)]
         self.cubeColourIndex=0
         self.wallTexDict={}
         # Setup collision detection & physics
@@ -75,11 +90,12 @@ class Game(ShowBase):
         self.taskMgr.add(self.checkImpactTask2,"checkImpactTask2", priority=2)
         self.taskMgr.add(self.updateColoursTask,"updateColoursTask")
         self.taskMgr.add(self.updateScoreTask,"updateScoreTask")
+        self.taskMgr.add(self.zonePropertiesTask,"zonePropertiesTask")
 
         if HAND_MODE:
             self.hand_detection = mediapipe_hands.detection()
             self.taskMgr.add(self.detectHandTask,"detectHandTask")
-            #self.taskMgr.doMethodLater(0.2, self.detectHandTask, 'detectHandTask')
+            
             
           
 
@@ -88,14 +104,15 @@ class Game(ShowBase):
 
         # register event handlers
         self.keymap = {"left":False,"right":False,"jump":False}
-        self.accept("a", self.update_keymap,["left",True])  # , ["w"])
+        self.accept("a", self.update_keymap,["left",True]) 
         self.accept("a-up", self.update_keymap,["left",False])
         self.accept("d", self.update_keymap,["right",True])
         self.accept("d-up", self.update_keymap,["right",False])
-        self.accept("e", self.toggleCamera,[self.camState])
+        #self.accept("e", self.toggleCamera,[self.camState])
         self.accept("space", self.update_keymap,["jump",True])
         self.accept("r", self.restart_game)
 
+    
 
     def load_back(self):
         
@@ -111,10 +128,13 @@ class Game(ShowBase):
         
 
     def restart_game(self): 
+        self.keymap = {"left":False,"right":False,"jump":False}
         self.sm.setPos(0,-50,FLOOR_Z)
         self.plane.setPos(5,20,-1)
         self.nyancat.setPos(-10,50,0)
         self.nyancatSide.setPos(-50,-20,0)
+        self.currentZone=-1
+        self.reverse=0
         scores.append(int(self.score/25))
         print(scores)
         self.score=0
@@ -123,12 +143,74 @@ class Game(ShowBase):
             wall.reparentTo(self.render)
             self.wallsActive.append(wall)
 
+
+
     def updateScoreTask(self, task):
         self.score +=1
         if self.score%25==0:
             self.scoreUI.setText(str(int(self.score/25)))
         return Task.cont
 
+
+
+    def zonePropertiesTask(self, task):
+        #for i,zone in enumerate(self.zones):
+        zone_1 = self.zones[0]
+        zone_2 = self.zones[1]
+        zone_3 = self.zones[2]
+        zone_4 = self.zones[3]
+        if zone_1[0]<=self.sm.getY()<=zone_1[1]:
+            #print("in zone")
+            if self.currentZone!=1:
+                #self.camState=False
+                self.zoneBuff.setText(self.zoneChanges[0])
+                self.toggleCamera(self.camState)
+                self.currentZone=1
+        
+        elif zone_2[0]<=self.sm.getY()<=zone_2[1]:
+            #print("zone 2")
+            if self.currentZone!=2:
+                self.zoneBuff.setText(self.zoneChanges[1])
+                self.speed=self.speed*2
+                self.currentZone=2
+        elif zone_3[0]<=self.sm.getY()<=zone_3[1]:
+            #print("zone 3")
+            if self.currentZone!=3:
+                self.zoneBuff.setText(self.zoneChanges[2])
+                self.slight.setColor((0,0,0,0))
+                self.alight.setColor((0,0,0,0))
+                #self.render.clearLight(self.slight)
+                self.currentZone=3
+        
+        elif zone_4[0]<=self.sm.getY()<=zone_4[1]:
+            #print("zone 3")
+            if self.currentZone!=4:
+                self.zoneBuff.setText(self.zoneChanges[3])
+                self.reverse=1
+                #self.render.clearLight(self.slight)
+                self.currentZone=4
+        else:
+            self.zoneBuff.setText("")
+            if not self.camState:
+                #self.camState=True
+                self.toggleCamera(self.camState)
+
+                self.currentZone=-1
+            if not self.speed==SPEED:
+                self.speed=SPEED
+            
+            if self.slight.color!=INITIAL_SLIGHT:
+                self.alight.setColor(INITIAL_ALIGHT)
+                self.slight.setColor(INITIAL_SLIGHT)
+
+            if self.reverse:
+                self.reverse=0
+            
+            
+        return Task.cont
+
+    
+    
     def detectHandTask(self, task):
         
         handDecision = self.hand_detection.get_frame()
@@ -137,6 +219,11 @@ class Game(ShowBase):
         self.update_keymap("jump", bool(handDecision["Jump"]))
         return Task.cont
         #return Task.again
+    
+    
+    
+    
+    
     
     def updateColoursTask(self, task):
         
@@ -155,6 +242,9 @@ class Game(ShowBase):
             self.cubeColourIndex=new_cube_tex
         return Task.cont
 
+    
+    
+    
     
     def add_player(self):
 
@@ -178,6 +268,8 @@ class Game(ShowBase):
        
         
         
+    
+    
     def setup_level(self):
         self.cTrav = CollisionTraverser()
         self.pusher = CollisionHandlerPusher()
@@ -205,7 +297,7 @@ class Game(ShowBase):
         wall_heights= [FLOOR_Z,FLOOR_Z+4]
         self.walls = []
         self.wallsActive = []
-        for i in range(15):
+        for i in range(50):
             #if random.randint(0,1):#ghost or regular wall
             #wall = self.loader.loadModel("assets/basewall.egg")
             wall = self.loader.loadModel("assets/ghostwall_tex.egg")
@@ -218,14 +310,18 @@ class Game(ShowBase):
             
             
             
+            texture_index = random.randint(0,2)
+            #wall.setTexture(self.all_tex[texture_index], 1)
             myMaterial = Material()
-            myMaterial.setShininess(5.0) # Make this material shiny
+            myMaterial.setShininess(5) # Make this material shiny
             myMaterial.setAmbient((0, 0, 1, 1)) # Make this material blue
+            myMaterial.setBaseColor((255,0,0,1))
+            myMaterial.setEmission((255,0,0,1))
+            #myMaterial.setSpecular((255,0,0,.1))
             colour=Vec4(*colours[random.randint(0,2)],1)
+            
             myMaterial.setDiffuse(colour)
             wall.setMaterial(myMaterial) # Apply the material to this nodePath
-            texture_index = random.randint(0,2)
-            wall.setTexture(self.all_tex[texture_index], 1)
             self.walls.append(wall)
             self.wallsActive.append(wall)
             self.wallTexDict[12*(i+1)]=texture_index
@@ -235,6 +331,15 @@ class Game(ShowBase):
         
         self.cTrav.addCollider(self.collider, self.pusher)
         
+    
+    
+    
+    
+    
+    
+    
+    
+    
     def closestWallTask(self, task):
         dist=1000
         closest=None
@@ -253,10 +358,15 @@ class Game(ShowBase):
        
         return Task.cont  
 
+    
+    
+    
+    
+    
     def add_lighting(self):
         
         self.alight = AmbientLight("alight")
-        self.alight.setColor((255, 255, 255, .2))
+        self.alight.setColor(INITIAL_ALIGHT)
         """
         
         self.dlight = DirectionalLight("dlight")
@@ -272,11 +382,11 @@ class Game(ShowBase):
         
         self.render.setLight(self.render.attachNewNode(self.alight))
         
-        slight = Spotlight('slight')
-        slight.setColor((0, 0, 255, 0.5))
+        self.slight = Spotlight('slight')
+        self.slight.setColor(INITIAL_SLIGHT)
         lens = PerspectiveLens()
-        slight.setLens(lens)
-        self.slnp = self.render.attachNewNode(slight)
+        self.slight.setLens(lens)
+        self.slnp = self.render.attachNewNode(self.slight)
         self.slnp.setPos(0, self.sm.getY()-CAMERA_DIST_Y, 1000)
         self.slnp.lookAt(self.sm)
         self.render.setLight(self.slnp)
@@ -292,6 +402,9 @@ class Game(ShowBase):
         self.camState = not self.camState
     
 
+
+
+
     def followCubeBehindTask(self, task):
 
         self.cameraBehind.setPos(self.sm.getX(), self.sm.getY()-CAMERA_DIST_Y, CAMERA_DIST_Z)
@@ -306,6 +419,7 @@ class Game(ShowBase):
     
     
     
+
     def checkImpactTask2(self, task):
         
         if self.closestWall:
@@ -320,6 +434,9 @@ class Game(ShowBase):
             
         return Task.cont
     
+    
+    
+    
     def followCubeSideTask(self, task):
 
         
@@ -332,6 +449,9 @@ class Game(ShowBase):
     
 
         return Task.cont
+    
+    
+    
     
     def update_ode(self, task):
        
@@ -371,14 +491,35 @@ class Game(ShowBase):
         self.nyancat.setPos(self.nyancat.getPos() + Vec3(0,self.speed*self.dt,0))
         self.nyancatSide.setPos(self.nyancatSide.getPos() + Vec3(0,self.speed*self.dt,0))
         ##experiments
+        
         self.slnp.setPos(self.slnp.getPos() + Vec3(0,self.speed*self.dt,0))
         self.slnp.lookAt(self.sm)
 
         return task.cont
     
+    
+    
+    
+    
     def update_keymap(self,key,state):
+
         if key in ["left", "right"] and self.camState:
-            self.keymap[key] = state
+            #print("received: ",key, state)
+            if self.reverse:
+                
+                        
+                if key == "left":
+                    self.keymap["right"] =  state
+                    #self.keymap["left"] =  False
+                    print(key, state)
+                else:
+                    self.keymap["left"] = state
+                    #self.keymap["right"] = False
+                          
+            else:
+                self.keymap[key] = state
+            
+            
         if self.jumping==False and key=="jump" and state==True:
             self.keymap[key] = state
             self.jumping=True
