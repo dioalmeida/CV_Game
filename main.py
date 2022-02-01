@@ -1,6 +1,7 @@
 #  Dev Team: Diogo Almeida, Rodrigo Ferreira & Luís Laranjeira
-from simplified_game import Game
+from epilepsy_dash import Game
+import sys
 
 if __name__ == '__main__':
-    game = Game()
+    game = Game(hand_mode=int(sys.argv[1]))
     game.run()
