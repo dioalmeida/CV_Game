@@ -1,6 +1,7 @@
 #  Dev Team: Diogo Almeida, Rodrigo Ferreira & Luís Laranjeira
 import math
 import random
+import sys
 from direct.gui.DirectGui import *
 from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
@@ -48,6 +49,7 @@ class Game(ShowBase):
         self.camera_initialization()
         self.input_initialization()
         self.add_soundtrack()
+        self.menu()
         self.taskMgr.add(self.followCubeBehindTask, "followCubeBehindTask")
         self.taskMgr.add(self.followCubeSideTask, "followCubeSideTask")
         self.taskMgr.add(self.closestWallTask,"closestWallTask", priority=1)
@@ -61,10 +63,6 @@ class Game(ShowBase):
             self.hand_detection = mediapipe_hands.detection()
             self.taskMgr.add(self.detectHandTask,"detectHandTask")
             
-            
-          
-
-
 
     def input_initialization(self):
         """
@@ -78,6 +76,7 @@ class Game(ShowBase):
         self.accept("space", self.update_keymap,["jump",True])
         self.accept("r", self.restart_game)
 
+
     def camera_initialization(self):
         """
         Initializing the the rear and side cameras.
@@ -90,6 +89,7 @@ class Game(ShowBase):
         self.cameraBehind = self.render.attachNewNode(self.camBehind)
         self.cameraSide = self.render.attachNewNode(self.camSide)
         self.dr.setCamera(self.cameraBehind)
+
 
     def variable_initialization(self):
         """
@@ -125,6 +125,7 @@ class Game(ShowBase):
                         mayChange = True,
                         scale=(0.2),
                         align = TextNode.ALeft)
+        
         self.notificationUI = OnscreenText(text = "",    
             fg=(255,255,255,1),
             bg=(0,0,0,0.5),
@@ -132,7 +133,6 @@ class Game(ShowBase):
             scale=(0.2),
             mayChange = True,
             align = TextNode.ACenter)
-
 
 
     def add_soundtrack(self):
@@ -164,6 +164,8 @@ class Game(ShowBase):
         """
         Task responsible for restarting the game.
         """
+        self.taskMgr.add(self.updateScoreTask,"updateScoreTask")
+        self.taskMgr.add(self.zonePropertiesTask,"zonePropertiesTask")
         self.keymap = {"left":False,"right":False,"jump":False}
         self.sm.setPos(0,-50,FLOOR_Z)
         self.plane.setPos(5,20,-1)
@@ -179,7 +181,8 @@ class Game(ShowBase):
         for wall in self.walls:
             wall.reparentTo(self.render)
             self.wallsActive.append(wall)
-
+        self.gameOverScreen.hide()
+        self.mySound.play()
 
 
     def updateScoreTask(self, task):
@@ -190,7 +193,6 @@ class Game(ShowBase):
         if self.score%25==0:
             self.scoreUI.setText(str(int(self.score/25)))
         return Task.cont
-
 
 
     def zonePropertiesTask(self, task):
@@ -257,7 +259,6 @@ class Game(ShowBase):
         return Task.cont
 
     
-    
     def detectHandTask(self, task):
         """
         Task responsible for extracting input from hand detection.
@@ -268,11 +269,6 @@ class Game(ShowBase):
         self.update_keymap("jump", bool(handDecision["Jump"]))
         return Task.cont
        
-    
-    
-    
-    
-    
     
     def updateColoursTask(self, task):
         """
@@ -293,10 +289,7 @@ class Game(ShowBase):
             self.cubeColourIndex=new_cube_tex
         return Task.cont
 
-    
-    
-    
-    
+       
     def add_player(self):
         """
         Generate the player entity.
@@ -319,9 +312,6 @@ class Game(ShowBase):
         self.jumpSpeed=0
        
         
-        
-    
-    
     def setup_level(self):
         """
         Generate the level (floor and obstacles)
@@ -390,14 +380,6 @@ class Game(ShowBase):
         self.cTrav.addCollider(self.collider, self.pusher)
         
     
-    
-    
-    
-    
-    
-    
-    
-    
     def closestWallTask(self, task):
         """
         Find the wall currently closest to the player and remove walls already passed by.
@@ -420,10 +402,6 @@ class Game(ShowBase):
        
         return Task.cont  
 
-    
-    
-    
-    
     
     def add_lighting(self):
         """
@@ -459,10 +437,19 @@ class Game(ShowBase):
         self.slnp = self.render.attachNewNode(self.slight)
         self.slnp.setPos(0, self.sm.getY()-CAMERA_DIST_Y, 1000)
         self.slnp.lookAt(self.sm)
+
+        self.plight = PointLight('plight')
+        self.plight.setColor(VBase4(0.2, 0.2, 0.2, 1))
+        self.plight.setShadowCaster(True, 512, 512)
+        self.plight.setAttenuation((1, 0, 1)) #how far will the light go...?
+        self.plnp = self.render.attachNewNode(self.plight)
+        self.plnp.setPos(10, 20, 0)
+        self.render.setLight(self.plnp)
         
         #self.render.setLight(self.slnp)
         self.render.setShaderAuto()
     
+
     def toggleCamera(self,state):
         if self.camState:
             self.dr.setCamera(self.cameraSide)
@@ -472,9 +459,6 @@ class Game(ShowBase):
             self.dr.setCamera(self.cameraBehind)
         self.camState = not self.camState
     
-
-
-
 
     def followCubeBehindTask(self, task):
         """
@@ -489,9 +473,6 @@ class Game(ShowBase):
 
         return Task.cont
     
-    
-    
-    
 
     def checkImpactTask2(self, task):
         """
@@ -503,15 +484,14 @@ class Game(ShowBase):
                 if  (self.sm.getZ() >= self.closestWall.getZ()-1 and self.sm.getZ() <= self.closestWall.getZ()+1) and (self.sm.getX() >= self.closestWall.getX()-3 and self.sm.getX() <= self.closestWall.getX()+3.5):
                   
                     if self.sm.getTexture()!=self.closestWall.getTexture():
-                        self.restart_game()
+                        self.stop()
+                        self.gameOverScreen.show()
+                        self.finalScoreLabel["text"] = "Final score: " + str(int(self.score/25))
+                        self.finalScoreLabel.setText()
                 
-                
-            
         return Task.cont
     
-    
-    
-    
+
     def followCubeSideTask(self, task):
         """
         Task responsible for having the side camera following the cube.
@@ -527,9 +507,7 @@ class Game(ShowBase):
 
         return Task.cont
     
-    
-    
-    
+
     def update_ode(self, task):
         """
         Apply movement to the various entities.
@@ -576,10 +554,7 @@ class Game(ShowBase):
         
         return task.cont
     
-    
-    
-    
-    
+
     def update_keymap(self,key,state):
         """
         Update the keymap given the current input.
@@ -606,4 +581,47 @@ class Game(ShowBase):
             self.keymap[key] = state
             self.jumping=True
             self.jumpSpeed=JUMP_SPEED
-            
+
+
+    def quit(self):
+        sys.exit()
+
+
+    def stop(self):
+        self.mySound.stop()
+        self.taskMgr.remove('zonePropertiesTask')
+        self.taskMgr.remove('updateScoreTask')
+        
+
+    def menu(self):
+        self.gameOverScreen = DirectDialog(frameSize = (-0.7, 0.7, -0.7, 0.7),
+                                   fadeScreen = 0.4,
+                                   relief = DGG.FLAT)
+
+        self.gameOverScreen.hide()
+
+        label = DirectLabel(text = "Game Over!",
+                    parent = self.gameOverScreen,
+                    scale = 0.1,
+                    pos = (0, 0, 0.2))
+
+        self.finalScoreLabel = DirectLabel(text = "",
+                                        parent = self.gameOverScreen,
+                                        scale = 0.07,
+                                        pos = (0, 0, 0))
+
+        btn = DirectButton(text = "Restart",
+                   command = self.restart_game,
+                   pos = (-0.3, 0, -0.2),
+                   parent = self.gameOverScreen,
+                   scale = 0.07)
+
+        btn.setTransparency(True)
+
+        btn = DirectButton(text = "Quit",
+                        command = self.quit,
+                        pos = (0.3, 0, -0.2),
+                        parent = self.gameOverScreen,
+                        scale = 0.07)
+
+        btn.setTransparency(True)
