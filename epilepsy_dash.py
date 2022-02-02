@@ -21,7 +21,7 @@ SPEED = 20
 JUMP_SPEED = 10
 FLOOR_Z=1
 ENDING_Y=610
-scores=[]
+scores=[0]
 
 colours=[(255,255,0),(0,255,255),(255,0,255)]
 
@@ -29,8 +29,8 @@ zones = [0,1,2]
 CAMERA_DIST_X = 40
 CAMERA_DIST_Y = 50
 CAMERA_DIST_Z= 10
-INITIAL_ALIGHT=(1,1,1,1)
-INITIAL_SLIGHT=(1,1,1,1)
+INITIAL_ALIGHT=(0.15,0.15,0.15,1)
+INITIAL_SLIGHT=(2,2,2,1)
 INITIAL_PLAYRATE=1
 
 
@@ -75,6 +75,7 @@ class Game(ShowBase):
         self.accept("d-up", self.update_keymap,["right",False])
         self.accept("space", self.update_keymap,["jump",True])
         self.accept("r", self.restart_game)
+        self.accept("q", self.quit)
 
 
     def camera_initialization(self):
@@ -162,8 +163,9 @@ class Game(ShowBase):
 
     def restart_game(self): 
         """
-        Task responsible for restarting the game.
+        Restarts several parameters to allow the player to replay the map.
         """
+        self.taskMgr.add(self.update_ode, "UpdateODE")
         self.taskMgr.add(self.updateScoreTask,"updateScoreTask")
         self.taskMgr.add(self.zonePropertiesTask,"zonePropertiesTask")
         self.keymap = {"left":False,"right":False,"jump":False}
@@ -171,10 +173,11 @@ class Game(ShowBase):
         self.plane.setPos(5,20,-1)
         self.nyancat.setPos(0,50,0)
         self.nyancatSide.setPos(-50,-20,0)
+        self.slnp.setPos(0, 0, 300)
         self.currentZone=-1
         self.reverse=0
         scores.append(int(self.score/25))
-        print(scores)
+      
         self.score=0
         self.wallsActive = []
         self.notificationUI.setText("")
@@ -255,7 +258,7 @@ class Game(ShowBase):
             
         if self.sm.getY()>ENDING_Y:
             self.notificationUI.setText("YOU WON")
-            self.taskMgr.remove("UpdateODE") ###
+            self.stop(won=True) ###
         return Task.cont
 
     
@@ -418,33 +421,34 @@ class Game(ShowBase):
         self.slight.lookAt(self.sm)
         self.slnp = self.render.attachNewNode(self.slight)
         """
-        """
         self.slight = PointLight('plight')
         self.slight.setColor(INITIAL_SLIGHT)
         self.slnp = self.render.attachNewNode(self.slight)
-        self.slnp.setPos(0, 0, 500)
+        self.slnp.setPos(0, 0, 300)
         self.slnp.lookAt(self.sm)
         self.render.setLight(self.slnp)
-        
         """
         
+        """
         self.render.setLight(self.render.attachNewNode(self.alight))
+        """
         
         self.slight = Spotlight('slight')
         self.slight.setColor(INITIAL_SLIGHT)
         lens = PerspectiveLens()
         self.slight.setLens(lens)
         self.slnp = self.render.attachNewNode(self.slight)
-        self.slnp.setPos(0, self.sm.getY()-CAMERA_DIST_Y, 1000)
+        self.slnp.setPos(0, self.sm.getY()-CAMERA_DIST_Y, 100)
         self.slnp.lookAt(self.sm)
+        """
 
-        self.plight = PointLight('plight')
-        self.plight.setColor(VBase4(0.2, 0.2, 0.2, 1))
-        self.plight.setShadowCaster(True, 512, 512)
-        self.plight.setAttenuation((1, 0, 1)) #how far will the light go...?
-        self.plnp = self.render.attachNewNode(self.plight)
-        self.plnp.setPos(10, 20, 0)
-        self.render.setLight(self.plnp)
+        #self.slight = PointLight('plight')
+        #self.slight.setColor(VBase4(INITIAL_SLIGHT))
+        #self.slight.setShadowCaster(True, 512, 512)
+        #self.slight.setAttenuation((1, 0, 1)) #how far will the light go...?
+        #self.slnp = self.render.attachNewNode(self.slight)
+        #self.slnp.setPos(10, 20, 50)
+        #self.render.setLight(self.slnp)
         
         #self.render.setLight(self.slnp)
         self.render.setShaderAuto()
@@ -485,9 +489,7 @@ class Game(ShowBase):
                   
                     if self.sm.getTexture()!=self.closestWall.getTexture():
                         self.stop()
-                        self.gameOverScreen.show()
-                        self.finalScoreLabel["text"] = "Final score: " + str(int(self.score/25))
-                        self.finalScoreLabel.setText()
+                        
                 
         return Task.cont
     
@@ -543,7 +545,7 @@ class Game(ShowBase):
         
         curr_X = self.sm.getX()
         if curr_X<=-5.98 or curr_X>=4.98:
-            self.restart_game()
+            self.stop()
 
         self.nyancat.setPos(self.nyancat.getPos() + Vec3(0,self.speed*self.dt,0))
         self.nyancatSide.setPos(self.nyancatSide.getPos() + Vec3(0,self.speed*self.dt,0))
@@ -568,7 +570,7 @@ class Game(ShowBase):
                 if key == "left":
                     self.keymap["right"] =  state
                     
-                    print(key, state)
+                    
                 else:
                     self.keymap["left"] = state
                     
@@ -587,10 +589,21 @@ class Game(ShowBase):
         sys.exit()
 
 
-    def stop(self):
+    def stop(self, won=False):
+        self.gameOverScreen.show()
+        if won:
+            self.resultLabel.setText("You Beat The Game!")
+        else:
+            self.resultLabel.setText("Game Over!")
+
+        current_score=int(self.score/25)
+        self.finalScoreLabel["text"] = "Final score: " + str(current_score) + "\nBest Score: " +\
+            str(max(current_score,max(scores)))
+        self.finalScoreLabel.setText()
         self.mySound.stop()
         self.taskMgr.remove('zonePropertiesTask')
         self.taskMgr.remove('updateScoreTask')
+        self.taskMgr.remove("UpdateODE")
         
 
     def menu(self):
@@ -600,7 +613,7 @@ class Game(ShowBase):
 
         self.gameOverScreen.hide()
 
-        label = DirectLabel(text = "Game Over!",
+        self.resultLabel = DirectLabel(text = "Game Over!",
                     parent = self.gameOverScreen,
                     scale = 0.1,
                     pos = (0, 0, 0.2))
@@ -610,7 +623,7 @@ class Game(ShowBase):
                                         scale = 0.07,
                                         pos = (0, 0, 0))
 
-        btn = DirectButton(text = "Restart",
+        btn = DirectButton(text = "Restart (r)",
                    command = self.restart_game,
                    pos = (-0.3, 0, -0.2),
                    parent = self.gameOverScreen,
@@ -618,7 +631,7 @@ class Game(ShowBase):
 
         btn.setTransparency(True)
 
-        btn = DirectButton(text = "Quit",
+        btn = DirectButton(text = "Quit (q)",
                         command = self.quit,
                         pos = (0.3, 0, -0.2),
                         parent = self.gameOverScreen,
