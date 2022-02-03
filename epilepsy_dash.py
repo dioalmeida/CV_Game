@@ -20,7 +20,7 @@ TRAPS_TAG = "traps-instance"
 SPEED = 20
 JUMP_SPEED = 10
 FLOOR_Z=1
-ENDING_Y=610
+ENDING_Y=620
 scores=[0]
 
 colours=[(255,255,0),(0,255,255),(255,0,255)]
@@ -569,7 +569,7 @@ class Game(ShowBase):
         """
         self.gameOverScreen.show()
         if won:
-            self.resultLabel.setText("You Beat The Game!")
+            self.resultLabel.setText("You Beat The Game!\nNice")
         else:
             self.resultLabel.setText("Game Over!")
 
