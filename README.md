@@ -1,1 +1,6 @@
-# CV_Game
+Epilepsy Dash by:
+Diogo Almeida
+
+Rodrigo Ferreira
+
+António Laranjeira
