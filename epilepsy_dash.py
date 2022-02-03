@@ -11,7 +11,7 @@ from panda3d.ode import *
 from panda3d.physics import *
 import mediapipe_hands
 import cv2
-#import gltf
+
 SEED=11
 random.seed(11)
 PLAYER_TAG = "player-instance"
@@ -336,10 +336,10 @@ class Game(ShowBase):
         self.plane.setColor(0,0,255,1)
         self.plane.reparentTo(self.render)
         
-        tex_moon = self.loader.loadTexture('assets/tex/candy.png')
-        tex_moon.setWrapU(Texture.WM_mirror)
-        tex_moon.setWrapV(Texture.WM_mirror)
-        self.plane.setTexture(tex_moon)
+        tex_candy = self.loader.loadTexture('assets/tex/candy.png')
+        tex_candy.setWrapU(Texture.WM_mirror)
+        tex_candy.setWrapV(Texture.WM_mirror)
+        self.plane.setTexture(tex_candy)
         #self.plane.setColor()
         tex0 = self.loader.loadTexture('assets/tex/brick0.png')
         tex1 = self.loader.loadTexture('assets/tex/brick1.png')
@@ -412,45 +412,16 @@ class Game(ShowBase):
         """
         self.alight = AmbientLight("alight")
         self.alight.setColor(INITIAL_ALIGHT)
-        
-        """
-        
-        self.slight = DirectionalLight("dlight")
-        self.slight.setDirection(LVector3(0, 45, 0))
-        self.slight.setColor(INITIAL_SLIGHT)
-        self.slight.lookAt(self.sm)
-        self.slnp = self.render.attachNewNode(self.slight)
-        """
+  
         self.slight = PointLight('plight')
         self.slight.setColor(INITIAL_SLIGHT)
         self.slnp = self.render.attachNewNode(self.slight)
         self.slnp.setPos(0, 0, 300)
         self.slnp.lookAt(self.sm)
         self.render.setLight(self.slnp)
-        """
-        
-        """
+      
         self.render.setLight(self.render.attachNewNode(self.alight))
-        """
-        
-        self.slight = Spotlight('slight')
-        self.slight.setColor(INITIAL_SLIGHT)
-        lens = PerspectiveLens()
-        self.slight.setLens(lens)
-        self.slnp = self.render.attachNewNode(self.slight)
-        self.slnp.setPos(0, self.sm.getY()-CAMERA_DIST_Y, 100)
-        self.slnp.lookAt(self.sm)
-        """
-
-        #self.slight = PointLight('plight')
-        #self.slight.setColor(VBase4(INITIAL_SLIGHT))
-        #self.slight.setShadowCaster(True, 512, 512)
-        #self.slight.setAttenuation((1, 0, 1)) #how far will the light go...?
-        #self.slnp = self.render.attachNewNode(self.slight)
-        #self.slnp.setPos(10, 20, 50)
-        #self.render.setLight(self.slnp)
-        
-        #self.render.setLight(self.slnp)
+       
         self.render.setShaderAuto()
     
 
@@ -549,10 +520,10 @@ class Game(ShowBase):
 
         self.nyancat.setPos(self.nyancat.getPos() + Vec3(0,self.speed*self.dt,0))
         self.nyancatSide.setPos(self.nyancatSide.getPos() + Vec3(0,self.speed*self.dt,0))
-        ##experiments
        
-        self.slnp.setPos(self.slnp.getPos() + Vec3(0,self.speed*self.dt,0))
-        #self.slnp.lookAt(self.sm)
+        if self.sm.getY()<350: #lights out zone ending
+            self.slnp.setPos(self.slnp.getPos() + Vec3(0,self.speed*self.dt,0))
+       
         
         return task.cont
     
@@ -586,10 +557,16 @@ class Game(ShowBase):
 
 
     def quit(self):
+        """
+        Quit the application.
+        """
         sys.exit()
 
 
     def stop(self, won=False):
+        """
+        Stop the game.
+        """
         self.gameOverScreen.show()
         if won:
             self.resultLabel.setText("You Beat The Game!")
@@ -607,6 +584,9 @@ class Game(ShowBase):
         
 
     def menu(self):
+        """
+        Create post game menu.
+        """
         self.gameOverScreen = DirectDialog(frameSize = (-0.7, 0.7, -0.7, 0.7),
                                    fadeScreen = 0.4,
                                    relief = DGG.FLAT)
