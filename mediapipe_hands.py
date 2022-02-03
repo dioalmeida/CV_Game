@@ -41,7 +41,7 @@ class detection:
         handMeasures = HandMeasures()
 
 
-        handMeasures.vertical_thumb_distance=hand.landmark[4].y-hand.landmark[3].y #up/down
+        handMeasures.vertical_thumb_distance=hand.landmark[4].y-hand.landmark[2].y #up/down
         handMeasures.horizontal_thumb_distance = hand.landmark[4].x-hand.landmark[2].x #left/right
         #handMeasures.dist_thumb_pointer = euclidian(hand.landmark[4], hand.landmark[8])
         #handMeasures.dist_thumb_basepointer = euclidian(hand.landmark[4], hand.landmark[5])
@@ -63,14 +63,15 @@ class detection:
 
     def HandDataDecision(self,handData):
         decisions={"Left":0, "Right":0, "Jump":0}
+        #print(handData.vertical_thumb_distance)
         if handData.horizontal_thumb_distance <=-0.04:
             #print("left")
             decisions["Left"]=1
-        elif handData.horizontal_thumb_distance >=0.04:
+        elif handData.horizontal_thumb_distance >=0.035:
             #print("right")
             decisions["Right"]=1
         #print(handData.vertical_thumb_distance)
-        if handData.vertical_thumb_distance > -0.04:
+        if handData.vertical_thumb_distance > -0.055:
             #print("jump")
             decisions["Jump"]=1
 

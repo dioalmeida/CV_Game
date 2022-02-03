@@ -267,6 +267,7 @@ class Game(ShowBase):
         Task responsible for extracting input from hand detection.
         """
         handDecision = self.hand_detection.get_frame()
+        #print(handDecision)
         self.update_keymap("left", bool(handDecision["Left"]))
         self.update_keymap("right", bool(handDecision["Right"]))
         self.update_keymap("jump", bool(handDecision["Jump"]))
